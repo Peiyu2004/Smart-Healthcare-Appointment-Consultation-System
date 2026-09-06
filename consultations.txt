@@ -1,0 +1,3 @@
+CNS101|APT101|2026-09-07T09:00:00|2026-09-07T09:20:00|Patient presenting with mild fever (38.2 C) and productive cough. Lung sounds clear.|Acute Upper Respiratory Tract Infection|COMPLETED
+CNS102|APT102|2026-09-07T09:30:00|N/A|Patient reporting for standard health screening. Blood pressure 120/80 mmHg.|Ongoing Examination|IN_PROGRESS
+CNS103|APT105|2026-09-07T09:00:00|2026-09-07T09:25:00|Patient reports episodic chest tightness under exertion. ECG performed on site.|Mild Hypertension & Exercise-Induced Angina|COMPLETED
