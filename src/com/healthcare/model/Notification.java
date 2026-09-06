@@ -1,32 +1,38 @@
 package com.healthcare.model;
 
-public class Notification {
-    private String notificationId;
-    private String userId;
-    private String type;
-    private String message;
-    private String channel;
-    private String createdAt;
-    private String sentAt;
-    private String status;
+import java.time.LocalDateTime;
 
-    public Notification(String notificationId, String userId, String type, String message, String channel, String createdAt, String sentAt, String status) {
-        this.notificationId = notificationId;
-        this.userId = userId;
+public class Notification {
+    private String recipientName;
+    private NotificationType type;
+    private String message;
+    private LocalDateTime timestamp;
+
+    public Notification(String recipientName, NotificationType type, String message) {
+        this.recipientName = recipientName;
         this.type = type;
         this.message = message;
-        this.channel = channel;
-        this.createdAt = createdAt;
-        this.sentAt = sentAt;
-        this.status = status;
+        this.timestamp = LocalDateTime.now();
     }
 
-    public String getNotificationId() { return notificationId; }
-    public String getUserId() { return userId; }
-    public String getType() { return type; }
-    public String getMessage() { return message; }
-    public String getChannel() { return channel; }
-    public String getCreatedAt() { return createdAt; }
-    public String getSentAt() { return sentAt; }
-    public String getStatus() { return status; }
+    public String getRecipientName() {
+        return recipientName;
+    }
+
+    public NotificationType getType() {
+        return type;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + timestamp + "] To: " + recipientName + " | " + type + " | " + message;
+    }
 }

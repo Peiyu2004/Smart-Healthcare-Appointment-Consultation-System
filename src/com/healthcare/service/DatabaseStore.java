@@ -164,17 +164,24 @@ public class DatabaseStore {
         }
     }
 
-    private void loadNotifications() {
+    public void loadNotifications() {
         File file = new File("notifications.txt");
         if (!file.exists()) return;
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
+            int id = 1;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 String[] p = line.split("\\|");
-                notifications.put(p[0], new Notification(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]));
+                
+                // Expected format in text file: recipientName|NOTIFICATION_TYPE|message
+                if (p.length >= 3) {
+                    NotificationType type = NotificationType.valueOf(p[1].trim().toUpperCase());
+                    Notification notification = new Notification(p[0].trim(), type, p[2].trim());
+                    notifications.put(String.valueOf(id++), notification);
+                }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -214,6 +221,16 @@ public class DatabaseStore {
         try (PrintWriter pw = new PrintWriter(new FileWriter("schedule_slots.txt"))) {
             for (ScheduleSlot s : slots.values()) {
                 pw.println(s.getSlotId() + "|" + s.getDoctorId() + "|" + s.getSlotDate() + "|" + s.getStartTime() + "|" + s.getEndTime() + "|" + s.getMode() + "|" + s.getStatus());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void saveNotifications() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter("notifications.txt"))) {
+            for (Notification n : notifications.values()) {
+                pw.println(n.getRecipientName() + "|" + n.getType() + "|" + n.getMessage());
             }
         } catch (IOException e) {
             e.printStackTrace();
