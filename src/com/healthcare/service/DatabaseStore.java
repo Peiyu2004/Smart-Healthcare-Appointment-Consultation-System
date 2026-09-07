@@ -19,7 +19,6 @@ public class DatabaseStore {
     private Map<String, Permission> permissions = new HashMap<>();
     private Map<String, ScheduleSlot> slots = new HashMap<>();
     private Map<String, Appointment> appointments = new HashMap<>();
-    private Map<String, QueueTicket> queueTickets = new HashMap<>();
     private Map<String, Consultation> consultations = new HashMap<>();
     private Map<String, Notification> notifications = new HashMap<>();
 
@@ -29,7 +28,6 @@ public class DatabaseStore {
         loadUsers();
         loadSlots();
         loadAppointments();
-        loadQueueTickets();
         loadConsultations();
         loadNotifications();
     }
@@ -137,21 +135,6 @@ public class DatabaseStore {
         }
     }
 
-    private void loadQueueTickets() {
-        File file = new File("queue_tickets.txt");
-        if (!file.exists()) return;
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
-                String[] p = line.split("\\|");
-                queueTickets.put(p[0], new QueueTicket(p[0], p[1], Integer.parseInt(p[2]), p[3], p[4], p[5], p[6]));
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void loadConsultations() {
         File file = new File("consultations.txt");
         if (!file.exists()) return;
@@ -246,7 +229,6 @@ public class DatabaseStore {
     public Map<String, User> getUsers() { return users; }
     public Map<String, ScheduleSlot> getSlots() { return slots; }
     public Map<String, Appointment> getAppointments() { return appointments; }
-    public Map<String, QueueTicket> getQueueTickets() { return queueTickets; }
     public Map<String, Consultation> getConsultations() { return consultations; }
     public Map<String, Notification> getNotifications() { return notifications; }
 }

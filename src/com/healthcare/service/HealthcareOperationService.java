@@ -8,7 +8,6 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class HealthcareOperationService {
@@ -30,17 +29,15 @@ public class HealthcareOperationService {
     }
 
     // =========================================================================
-    // 3.1 SCHEDULE SLOT OPERATIONS (CREATE, UPDATE, DELETE)
+    // SCHEDULE SLOT OPERATIONS (CREATE, UPDATE, DELETE)
     // =========================================================================
 
-    // Flow 3.1.1: Create consultation slot with ordered ID (SLT112, SLT113, etc.)
     public ScheduleSlot addScheduleSlot(User actor, String doctorName, String date, String startTime, String endTime, String mode) {
         if (!isAuthorized(actor)) {
             System.err.println("Access Denied: Only Doctors and Administrators can manage consultation slots.");
             return null;
         }
 
-        // Find the max existing numeric ID to generate the next sequential ID
         int maxId = 100;
         for (String id : db.getSlots().keySet()) {
             if (id.startsWith("SLT")) {
@@ -54,7 +51,6 @@ public class HealthcareOperationService {
         }
 
         String slotId = "SLT" + (maxId + 1);
-        // Uses doctorName directly and defaults to SCHEDULED status
         ScheduleSlot newSlot = new ScheduleSlot(slotId, doctorName, date, startTime, endTime, mode, "SCHEDULED");
 
         db.getSlots().put(slotId, newSlot);
@@ -62,7 +58,6 @@ public class HealthcareOperationService {
         return newSlot;
     }
     
-    // View all consultation slots
     public List<ScheduleSlot> getAllScheduleSlots(User actor) {
         if (!isAuthorized(actor)) {
             System.err.println("Access Denied: Only Doctors and Administrators can retrieve all slots.");
@@ -71,8 +66,8 @@ public class HealthcareOperationService {
         return new java.util.ArrayList<>(db.getSlots().values());
     }
 
-    // Flow 3.1.2: Update consultation slot
-    public boolean updateScheduleSlot(User actor, String slotId, String newDate, String newStartTime, String newEndTime, String newMode, String newStatus) {
+    // UPDATED: Added newDoctorName parameter to allow updating doctor assignments
+    public boolean updateScheduleSlot(User actor, String slotId, String newDoctorName, String newDate, String newStartTime, String newEndTime, String newMode, String newStatus) {
         if (!isAuthorized(actor)) {
             System.err.println("Access Denied: Unauthorized role.");
             return false;
@@ -83,6 +78,9 @@ public class HealthcareOperationService {
             return false;
         }
 
+        if (newDoctorName != null && !newDoctorName.trim().isEmpty()) {
+            slot.setDoctorId(newDoctorName);
+        }
         slot.setSlotDate(newDate);
         slot.setStartTime(newStartTime);
         slot.setEndTime(newEndTime);
@@ -93,29 +91,25 @@ public class HealthcareOperationService {
         return true;
     }
 
-    // Flow 3.1.3: Delete consultation slot
     public boolean deleteScheduleSlot(User actor, String slotId) {
         if (!isAuthorized(actor)) {
             System.err.println("Access Denied: Unauthorized role.");
             return false;
         }
 
-        // Flow 3.1.3.3: Check if there are any appointments assigned to this slot
         boolean hasAppointments = db.getAppointments().values().stream()
                 .anyMatch(app -> slotId.equals(app.getSlotId()) && !"CANCELLED".equalsIgnoreCase(app.getStatus()));
 
         if (hasAppointments) {
             System.out.println("Deletion Rejected: Cannot delete slot with active appointments.");
-            return false; // Flow 3.1.3.3.1
+            return false;
         }
 
-        // Flow 3.1.3.2: Delete slot if no appointments exist
         db.getSlots().remove(slotId);
         db.saveSlots();
         return true;
     }
 
-    // Flow 3.3.1: Block schedule slot
     public boolean blockScheduleSlot(User actor, String slotId) {
         if (!isAuthorized(actor)) return false;
         
@@ -128,34 +122,48 @@ public class HealthcareOperationService {
     }
 
     // =========================================================================
-    // 3.2 & FLOW 5: PATIENT QUEUE OPERATIONS
+    // PATIENT QUEUE OPERATIONS
     // =========================================================================
 
-    // Flow 5: Sort active patient appointments by scheduled time slot
-    public Queue<Appointment> getDoctorQueue(User actor, String doctorId) {
+    // Admin & Doctor Queue Access
+    public Queue<Appointment> getDoctorQueue(User actor, String doctorIdentifier) {
         Queue<Appointment> queue = new LinkedList<>();
         if (!isAuthorized(actor)) {
             return queue;
         }
 
+        boolean isAdmin = "ADMIN".equalsIgnoreCase(actor.getRoleLabel()) || "ADMINISTRATOR".equalsIgnoreCase(actor.getRoleLabel());
+
         List<Appointment> sortedQueue = db.getAppointments().values().stream()
-                .filter(app -> doctorId.equals(app.getDoctorId()))
-                .filter(app -> "WAITING".equalsIgnoreCase(app.getStatus()) || "SCHEDULED".equalsIgnoreCase(app.getStatus()))
-                .sorted(Comparator.comparing(Appointment::getAppointmentId)) // Sorts sequence
+                .filter(app -> {
+                    // Admin can filter by target doctor OR retrieve all waiting patients if doctorIdentifier is empty/null
+                    if (isAdmin) {
+                        if (doctorIdentifier == null || doctorIdentifier.trim().isEmpty()) {
+                            return true;
+                        }
+                        return doctorIdentifier.equalsIgnoreCase(app.getDoctorId());
+                    }
+                    // Doctor view: match actor's User ID or Full Name against appointment doctor field
+                    return actor.getUserId().equalsIgnoreCase(app.getDoctorId()) 
+                        || actor.getFullName().equalsIgnoreCase(app.getDoctorId())
+                        || (doctorIdentifier != null && doctorIdentifier.equalsIgnoreCase(app.getDoctorId()));
+                })
+                .filter(app -> "WAITING".equalsIgnoreCase(app.getStatus()) || "CHECKED_IN".equalsIgnoreCase(app.getStatus()))
+                .sorted(Comparator.comparing(Appointment::getAppointmentId))
                 .collect(Collectors.toList());
 
         queue.addAll(sortedQueue);
         return queue;
     }
 
-    // Flow 3.2.1 & Flow 6: Call patient into consultation
-    public Appointment callNextPatient(User actor, String doctorId) {
+    // Call next patient into consultation (Supports Admin & Doctor execution)
+    public Appointment callNextPatient(User actor, String doctorIdentifier) {
         if (!isAuthorized(actor)) {
             System.err.println("Access Denied: Unauthorized role.");
             return null;
         }
 
-        Queue<Appointment> queue = getDoctorQueue(actor, doctorId);
+        Queue<Appointment> queue = getDoctorQueue(actor, doctorIdentifier);
         if (queue.isEmpty()) {
             return null;
         }
@@ -164,13 +172,10 @@ public class HealthcareOperationService {
         nextApp.setStatus("IN_CONSULTATION");
         db.saveAppointments();
 
-        // Flow 3.2.2 & Flow 7: Included Use Case Execution
         sendAppointmentReminder(nextApp);
-
         return nextApp;
     }
 
-    // Flow 3.3: Mark patient absent
     public boolean markPatientAbsent(User actor, String appointmentId) {
         if (!isAuthorized(actor)) return false;
 
@@ -182,7 +187,6 @@ public class HealthcareOperationService {
         return true;
     }
 
-    // Check-in helper
     public boolean checkInPatient(User actor, String appointmentId) {
         if (!isAuthorized(actor)) return false;
 
@@ -194,9 +198,8 @@ public class HealthcareOperationService {
         return true;
     }
 
-    // Included Use Case: Send Appointment Reminder
     private void sendAppointmentReminder(Appointment app) {
-        System.out.println("[REMINDER SENT] Notification sent to Patient ID: " 
+        System.out.println("[REMINDER SENT] Notification sent to Patient: " 
                 + app.getPatientId() + " for Appointment ID: " + app.getAppointmentId());
     }
 }
