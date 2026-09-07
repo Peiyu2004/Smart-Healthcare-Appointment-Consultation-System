@@ -1,6 +1,9 @@
 package com.healthcare.ui;
 
+import com.healthcare.model.Administrator;
 import com.healthcare.model.Appointment;
+import com.healthcare.model.Doctor;
+import com.healthcare.model.Patient;
 import com.healthcare.model.ScheduleSlot;
 import com.healthcare.model.User;
 import com.healthcare.service.AppointmentService;
@@ -42,6 +45,7 @@ public class HealthcareUI extends JFrame {
     private JButton addSlotBtn;
     private JButton updateSlotBtn;
     private JButton deleteSlotBtn;
+    private JButton manageUsersBtn;
     private JTabbedPane tabbedPane;
     private JPanel queuePanel;
     
@@ -79,6 +83,7 @@ public class HealthcareUI extends JFrame {
         loginPassField = new JPasswordField(18);
 
         JButton loginButton = createStyledButton("Login");
+        JButton registerButton = createStyledButton("Register");
         loginButton.setFont(new Font("Arial", Font.BOLD, 14));
 
         gbc.gridx = 0;
@@ -103,6 +108,9 @@ public class HealthcareUI extends JFrame {
         gbc.gridwidth = 2;
         panel.add(loginButton, gbc);
 
+        gbc.gridy = 4;
+        panel.add(registerButton, gbc);
+
         loginButton.addActionListener(e -> {
             String email = loginEmailField.getText().trim();
             String pass = new String(loginPassField.getPassword()).trim();
@@ -124,6 +132,8 @@ public class HealthcareUI extends JFrame {
             }
         });
 
+        registerButton.addActionListener(e -> showRegisterDialog());
+
         return panel;
     }
 
@@ -136,10 +146,19 @@ public class HealthcareUI extends JFrame {
         userInfoLabel = new JLabel("Logged in as: User");
         userInfoLabel.setFont(new Font("Arial", Font.BOLD, 14));
 
+        JPanel topButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        JButton profileBtn = createStyledButton("My Profile");
+        manageUsersBtn = createStyledButton("Manage Users");
         JButton logoutBtn = createStyledButton("Logout");
+        topButtons.add(profileBtn);
+        topButtons.add(manageUsersBtn);
+        topButtons.add(logoutBtn);
         topPanel.add(userInfoLabel, BorderLayout.WEST);
-        topPanel.add(logoutBtn, BorderLayout.EAST);
+        topPanel.add(topButtons, BorderLayout.EAST);
         panel.add(topPanel, BorderLayout.NORTH);
+
+        profileBtn.addActionListener(e -> showProfileDialog());
+        manageUsersBtn.addActionListener(e -> showManageUsersDialog());
 
         logoutBtn.addActionListener(e -> {
             currentUser = null;
@@ -527,6 +546,394 @@ public class HealthcareUI extends JFrame {
         return panel;
     }
 
+    // ==================== USER REGISTRATION & PROFILE ====================
+
+    private void showRegisterDialog() {
+        JTextField nameField = new JTextField();
+        JTextField emailField = new JTextField();
+        JTextField phoneField = new JTextField();
+        JPasswordField passwordField = new JPasswordField();
+        JComboBox<String> roleBox = new JComboBox<>(new String[] { "PATIENT", "DOCTOR" });
+
+        JTextField dobField = new JTextField("2000-01-01");
+        JTextField genderField = new JTextField("Not Specified");
+        JTextField addressField = new JTextField("Not Provided");
+        JTextField specializationField = new JTextField("General Practice");
+        JTextField departmentField = new JTextField("Outpatient");
+        JTextField feeField = new JTextField("80.00");
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
+        panel.add(new JLabel("Full Name:"));
+        panel.add(nameField);
+        panel.add(new JLabel("Email:"));
+        panel.add(emailField);
+        panel.add(new JLabel("Phone Number:"));
+        panel.add(phoneField);
+        panel.add(new JLabel("Password:"));
+        panel.add(passwordField);
+        panel.add(new JLabel("Role:"));
+        panel.add(roleBox);
+
+        roleBox.addActionListener(e -> {
+            boolean doctor = "DOCTOR".equals(roleBox.getSelectedItem());
+            specializationField.setEnabled(doctor);
+            departmentField.setEnabled(doctor);
+            feeField.setEnabled(doctor);
+            dobField.setEnabled(!doctor);
+            genderField.setEnabled(!doctor);
+            addressField.setEnabled(!doctor);
+        });
+
+        // Patient-specific fields
+        panel.add(new JLabel("Date of Birth:"));
+        panel.add(dobField);
+        panel.add(new JLabel("Gender:"));
+        panel.add(genderField);
+        panel.add(new JLabel("Address:"));
+        panel.add(addressField);
+
+        // Doctor-specific fields
+        panel.add(new JLabel("Specialization:"));
+        panel.add(specializationField);
+        panel.add(new JLabel("Department:"));
+        panel.add(departmentField);
+        panel.add(new JLabel("Consultation Fee:"));
+        panel.add(feeField);
+
+        int result = JOptionPane.showConfirmDialog(
+                this, panel, "Register Account", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (result != JOptionPane.OK_OPTION) return;
+
+        String name = nameField.getText().trim();
+        String email = emailField.getText().trim();
+        String phone = phoneField.getText().trim();
+        String password = new String(passwordField.getPassword());
+
+        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Please fill in Full Name, Email, Phone Number and Password.",
+                    "Validation Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String selectedRole = (String) roleBox.getSelectedItem();
+
+        if ("PATIENT".equals(selectedRole)) {
+            Patient patient = userService.registerPatient(
+                    name, email, phone, password,
+                    dobField.getText().trim(),
+                    genderField.getText().trim(),
+                    addressField.getText().trim());
+
+            if (patient != null) {
+                JOptionPane.showMessageDialog(this,
+                        "Patient account created successfully!\nUser ID: " + patient.getUserId());
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Registration failed. Email may already be registered.",
+                        "Registration Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            double fee;
+            try {
+                fee = Double.parseDouble(feeField.getText().trim());
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Consultation fee must be a valid number.",
+                        "Validation Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            Doctor doctor = userService.registerDoctor(
+                    name, email, phone, password,
+                    specializationField.getText().trim(),
+                    departmentField.getText().trim(), fee);
+
+            if (doctor != null) {
+                JOptionPane.showMessageDialog(this,
+                        "Doctor account created successfully!\nUser ID: " + doctor.getUserId());
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Registration failed. Email may already be registered.",
+                        "Registration Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void showProfileDialog() {
+        if (currentUser == null) return;
+
+        JTextField nameField = new JTextField(currentUser.getFullName());
+        JTextField emailField = new JTextField(currentUser.getEmail());
+        JTextField phoneField = new JTextField(currentUser.getPhoneNumber());
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
+        panel.add(new JLabel("Full Name:"));
+        panel.add(nameField);
+        panel.add(new JLabel("Email:"));
+        panel.add(emailField);
+        panel.add(new JLabel("Phone Number:"));
+        panel.add(phoneField);
+        panel.add(new JLabel("Role:"));
+        panel.add(new JLabel(currentUser.getRoleLabel()));
+        panel.add(new JLabel("Account Status:"));
+        panel.add(new JLabel(currentUser.getAccountStatus()));
+
+        if (currentUser instanceof Patient) {
+            Patient patient = (Patient) currentUser;
+            panel.add(new JLabel("Patient No:"));
+            panel.add(new JLabel(patient.getPatientNo()));
+            panel.add(new JLabel("Date of Birth:"));
+            panel.add(new JLabel(patient.getDateOfBirth()));
+            panel.add(new JLabel("Gender:"));
+            panel.add(new JLabel(patient.getGender()));
+            panel.add(new JLabel("Address:"));
+            panel.add(new JLabel(patient.getAddress()));
+        } else if (currentUser instanceof Doctor) {
+            Doctor doctor = (Doctor) currentUser;
+            panel.add(new JLabel("Doctor ID:"));
+            panel.add(new JLabel(doctor.getDoctorId()));
+            panel.add(new JLabel("Specialization:"));
+            panel.add(new JLabel(doctor.getSpecialization()));
+            panel.add(new JLabel("Department:"));
+            panel.add(new JLabel(doctor.getDepartment()));
+        } else if (currentUser instanceof Administrator) {
+            Administrator admin = (Administrator) currentUser;
+            panel.add(new JLabel("Admin ID:"));
+            panel.add(new JLabel(admin.getAdminId()));
+            panel.add(new JLabel("Staff Department:"));
+            panel.add(new JLabel(admin.getStaffDepartment()));
+        }
+
+        int result = JOptionPane.showConfirmDialog(
+                this, panel, "My Profile", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            boolean updated = userService.updateProfile(
+                    currentUser,
+                    currentUser.getEmail(),
+                    emailField.getText().trim(),
+                    nameField.getText().trim(),
+                    phoneField.getText().trim());
+
+            if (updated) {
+                JOptionPane.showMessageDialog(this, "Profile updated successfully!");
+                userInfoLabel.setText("Logged in as: " + currentUser.getFullName()
+                        + " (" + currentUser.getRoleLabel() + ")");
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Profile update failed. Check the email or authorization.",
+                        "Update Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
+        showProfileActionsDialog();
+    }
+
+    private void showProfileActionsDialog() {
+        if (currentUser == null) return;
+
+        JButton changePasswordButton = createStyledButton("Change Password");
+        JButton deactivateButton = createStyledButton("Deactivate Account");
+        JButton closeButton = createStyledButton("Close");
+
+        JPanel panel = new JPanel(new FlowLayout());
+        panel.add(changePasswordButton);
+        panel.add(deactivateButton);
+        panel.add(closeButton);
+
+        JDialog dialog = new JDialog(this, "Account Actions", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.add(new JLabel("Manage your account:", SwingConstants.CENTER), BorderLayout.NORTH);
+        dialog.add(panel, BorderLayout.CENTER);
+        dialog.setSize(420, 130);
+        dialog.setLocationRelativeTo(this);
+
+        changePasswordButton.addActionListener(e -> showChangePasswordDialog());
+
+        deactivateButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                    dialog,
+                    "Are you sure you want to deactivate your account?",
+                    "Confirm Deactivation",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                boolean success = userService.deactivateAccount(
+                        currentUser, currentUser.getEmail());
+
+                if (success) {
+                    JOptionPane.showMessageDialog(dialog, "Account deactivated successfully.");
+                    dialog.dispose();
+                    currentUser = null;
+                    loginEmailField.setText("");
+                    loginPassField.setText("");
+                    cardLayout.show(mainPanel, "LOGIN");
+                } else {
+                    JOptionPane.showMessageDialog(dialog,
+                            "Unable to deactivate account.",
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        closeButton.addActionListener(e -> dialog.dispose());
+        dialog.setVisible(true);
+    }
+
+    private void showChangePasswordDialog() {
+        if (currentUser == null) return;
+
+        JPasswordField oldPassword = new JPasswordField();
+        JPasswordField newPassword = new JPasswordField();
+        JPasswordField confirmPassword = new JPasswordField();
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
+        panel.add(new JLabel("Current Password:"));
+        panel.add(oldPassword);
+        panel.add(new JLabel("New Password:"));
+        panel.add(newPassword);
+        panel.add(new JLabel("Confirm Password:"));
+        panel.add(confirmPassword);
+
+        int result = JOptionPane.showConfirmDialog(
+                this, panel, "Change Password", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+
+        if (result != JOptionPane.OK_OPTION) return;
+
+        String oldPass = new String(oldPassword.getPassword());
+        String newPass = new String(newPassword.getPassword());
+        String confirmPass = new String(confirmPassword.getPassword());
+
+        if (newPass.isEmpty() || !newPass.equals(confirmPass)) {
+            JOptionPane.showMessageDialog(this,
+                    "New passwords do not match or are empty.",
+                    "Validation Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (userService.changePassword(currentUser, oldPass, newPass)) {
+            JOptionPane.showMessageDialog(this, "Password changed successfully!");
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Current password is incorrect.",
+                    "Password Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void showManageUsersDialog() {
+        if (currentUser == null || !userService.hasPermission(currentUser, "PERM_MANAGE_USER")) {
+            JOptionPane.showMessageDialog(this,
+                    "Access denied. Administrator permission required.",
+                    "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        List<User> users = userService.getAllUsers();
+        String[] columns = { "Name", "Email", "Role", "Phone", "Status" };
+        DefaultTableModel model = new NonEditableTableModel(columns, 0);
+
+        for (User user : users) {
+            model.addRow(new Object[] {
+                    user.getFullName(), user.getEmail(), user.getRoleLabel(),
+                    user.getPhoneNumber(), user.getAccountStatus()
+            });
+        }
+
+        JTable table = new JTable(model);
+        JButton editButton = createStyledButton("Edit Selected User");
+        JButton deactivateButton = createStyledButton("Deactivate Selected User");
+        JButton closeButton = createStyledButton("Close");
+
+        JPanel buttons = new JPanel(new FlowLayout());
+        buttons.add(editButton);
+        buttons.add(deactivateButton);
+        buttons.add(closeButton);
+
+        JDialog dialog = new JDialog(this, "Manage Users", true);
+        dialog.setLayout(new BorderLayout(5, 5));
+        dialog.add(new JScrollPane(table), BorderLayout.CENTER);
+        dialog.add(buttons, BorderLayout.SOUTH);
+        dialog.setSize(750, 400);
+        dialog.setLocationRelativeTo(this);
+
+        editButton.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(dialog, "Please select a user.");
+                return;
+            }
+
+            String oldEmail = (String) model.getValueAt(row, 1);
+            User target = userService.getUserByEmail(oldEmail);
+            if (target == null) return;
+
+            JTextField nameField = new JTextField(target.getFullName());
+            JTextField emailField = new JTextField(target.getEmail());
+            JTextField phoneField = new JTextField(target.getPhoneNumber());
+
+            JPanel editPanel = new JPanel(new GridLayout(0, 2, 5, 5));
+            editPanel.add(new JLabel("Full Name:"));
+            editPanel.add(nameField);
+            editPanel.add(new JLabel("Email:"));
+            editPanel.add(emailField);
+            editPanel.add(new JLabel("Phone Number:"));
+            editPanel.add(phoneField);
+
+            int result = JOptionPane.showConfirmDialog(
+                    dialog, editPanel, "Update User Profile", JOptionPane.OK_CANCEL_OPTION);
+
+            if (result == JOptionPane.OK_OPTION) {
+                if (userService.updateProfile(currentUser, oldEmail,
+                        emailField.getText().trim(), nameField.getText().trim(),
+                        phoneField.getText().trim())) {
+                    model.setValueAt(nameField.getText().trim(), row, 0);
+                    model.setValueAt(emailField.getText().trim(), row, 1);
+                    model.setValueAt(phoneField.getText().trim(), row, 3);
+                    JOptionPane.showMessageDialog(dialog, "User profile updated.");
+                } else {
+                    JOptionPane.showMessageDialog(dialog,
+                            "Update failed. The email may already exist.",
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        deactivateButton.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(dialog, "Please select a user.");
+                return;
+            }
+
+            String email = (String) model.getValueAt(row, 1);
+            if (email.equalsIgnoreCase(currentUser.getEmail())) {
+                JOptionPane.showMessageDialog(dialog,
+                        "Use My Profile to deactivate your own account.");
+                return;
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(
+                    dialog, "Deactivate account " + email + "?",
+                    "Confirm Deactivation", JOptionPane.YES_NO_OPTION);
+
+            if (confirm == JOptionPane.YES_OPTION
+                    && userService.deactivateAccount(currentUser, email)) {
+                model.setValueAt("INACTIVE", row, 4);
+                JOptionPane.showMessageDialog(dialog, "User account deactivated.");
+            }
+        });
+
+        closeButton.addActionListener(e -> dialog.dispose());
+        dialog.setVisible(true);
+    }
+
     private void applyRolePermissions() {
         if (currentUser == null)
             return;
@@ -534,17 +941,21 @@ public class HealthcareUI extends JFrame {
         String role = currentUser.getRoleLabel() != null ? currentUser.getRoleLabel().toUpperCase() : "PATIENT";
         userInfoLabel.setText("Logged in as: " + currentUser.getFullName() + " (" + role + ")");
 
-        boolean isStaff = role.equals("DOCTOR") || role.equals("ADMIN") || role.equals("ADMINISTRATOR");
-        boolean isAdmin = role.equals("ADMIN") || role.equals("ADMINISTRATOR");
+        boolean canBook = userService.hasPermission(currentUser, "PERM_BOOK_APPOINTMENT");
+        boolean canManageSlots = userService.hasPermission(currentUser, "PERM_MANAGE_SLOTS");
+        boolean canManageUsers = userService.hasPermission(currentUser, "PERM_MANAGE_USER");
+        boolean isAdmin = canManageUsers;
+        boolean isStaff = canManageSlots || role.equals("DOCTOR") || isAdmin;
 
-        // Doctors/Admins manage slots; Patients book slots
-        bookBtn.setVisible(!isStaff);
-        addSlotBtn.setVisible(isStaff);
-        updateSlotBtn.setVisible(isStaff);
-        deleteSlotBtn.setVisible(isStaff);
+        // UI visibility follows RBAC permissions.
+        bookBtn.setVisible(canBook);
+        addSlotBtn.setVisible(canManageSlots);
+        updateSlotBtn.setVisible(canManageSlots);
+        deleteSlotBtn.setVisible(canManageSlots);
 
         // Show Admin Queue Dropdown Filter only if Administrator
         queueHeaderPanel.setVisible(isAdmin);
+        manageUsersBtn.setVisible(canManageUsers);
 
         if (isAdmin) {
             populateAdminDoctorFilter();
