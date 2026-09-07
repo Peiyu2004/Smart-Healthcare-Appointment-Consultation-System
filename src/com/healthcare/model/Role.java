@@ -20,5 +20,15 @@ public class Role {
     public String getDescription() { return description; }
     public Set<Permission> getPermissions() { return permissions; }
 
-    public void addPermission(Permission permission) { permissions.add(permission); }
+    public void addPermission(Permission permission) {
+        if (permission != null) permissions.add(permission);
+    }
+
+    public boolean hasPermission(String permissionName) {
+        if (permissionName == null) return false;
+        for (Permission permission : permissions) {
+            if (permission.getPermissionName().equalsIgnoreCase(permissionName)) return true;
+        }
+        return false;
+    }
 }

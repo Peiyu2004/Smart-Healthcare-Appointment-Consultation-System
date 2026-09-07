@@ -19,18 +19,10 @@ public class Patient extends User {
     public String getGender() { return gender; }
     public String getAddress() { return address; }
 
+    public void setDateOfBirth(String dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public void setGender(String gender) { this.gender = gender; }
+    public void setAddress(String address) { this.address = address; }
+
     @Override
     public String getRoleLabel() { return "PATIENT"; }
-    
-    public void setDateOfBirth(String dateOfBirth) {
-    this.dateOfBirth = dateOfBirth;
-}
-
-public void setGender(String gender) {
-    this.gender = gender;
-}
-
-public void setAddress(String address) {
-    this.address = address;
-}
 }
