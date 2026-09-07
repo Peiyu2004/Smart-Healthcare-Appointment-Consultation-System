@@ -65,12 +65,34 @@ public class DatabaseStore {
                 if (line.trim().isEmpty()) continue;
                 String[] p = line.split("\\|");
                 Role role = new Role(p[0], p[1], p[2]);
-                permissions.values().forEach(role::addPermission);
+                assignRolePermissions(role);
                 roles.put(p[0], role);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void assignRolePermissions(Role role) {
+        String roleName = role.getRoleName();
+
+        if ("PATIENT".equalsIgnoreCase(roleName)) {
+            addPermission(role, "P001"); // Book appointment
+            addPermission(role, "P003"); // View slots
+        } else if ("DOCTOR".equalsIgnoreCase(roleName)) {
+            addPermission(role, "P003"); // View slots
+            addPermission(role, "P004"); // Manage slots
+            addPermission(role, "P005"); // Start consultation
+            addPermission(role, "P006"); // Record outcome
+        } else if ("ADMIN".equalsIgnoreCase(roleName) || "ADMINISTRATOR".equalsIgnoreCase(roleName)) {
+            // Administrator has full system access.
+            permissions.values().forEach(role::addPermission);
+        }
+    }
+
+    private void addPermission(Role role, String permissionId) {
+        Permission permission = permissions.get(permissionId);
+        if (permission != null) role.addPermission(permission);
     }
 
     private void loadUsers() {
@@ -227,6 +249,8 @@ public class DatabaseStore {
     // ==================== GETTERS ====================
 
     public Map<String, User> getUsers() { return users; }
+    public Map<String, Role> getRoles() { return roles; }
+    public Map<String, Permission> getPermissions() { return permissions; }
     public Map<String, ScheduleSlot> getSlots() { return slots; }
     public Map<String, Appointment> getAppointments() { return appointments; }
     public Map<String, Consultation> getConsultations() { return consultations; }
