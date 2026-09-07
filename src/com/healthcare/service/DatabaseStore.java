@@ -104,17 +104,20 @@ public class DatabaseStore {
         }
     }
 
-    private void loadSlots() {
-        File file = new File("schedule_slots.txt");
+    public void loadSlots() {
+        File file = new File("scheduleSlots.txt");
         if (!file.exists()) return;
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 String[] p = line.split("\\|");
-                slots.put(p[0], new ScheduleSlot(p[0], p[1], p[2], p[3], p[4], p[5], p[6]));
+                if (p.length >= 7) {
+                    ScheduleSlot slot = new ScheduleSlot(p[0], p[1], p[2], p[3], p[4], p[5], p[6]);
+                    slots.put(p[0], slot);
+                }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -218,9 +221,10 @@ public class DatabaseStore {
     }
 
     public void saveSlots() {
-        try (PrintWriter pw = new PrintWriter(new FileWriter("schedule_slots.txt"))) {
+        try (PrintWriter pw = new PrintWriter(new FileWriter("scheduleSlots.txt"))) {
             for (ScheduleSlot s : slots.values()) {
-                pw.println(s.getSlotId() + "|" + s.getDoctorId() + "|" + s.getSlotDate() + "|" + s.getStartTime() + "|" + s.getEndTime() + "|" + s.getMode() + "|" + s.getStatus());
+                pw.println(s.getSlotId() + "|" + s.getDoctorId() + "|" + s.getSlotDate() + "|" +
+                           s.getStartTime() + "|" + s.getEndTime() + "|" + s.getMode() + "|" + s.getStatus());
             }
         } catch (IOException e) {
             e.printStackTrace();

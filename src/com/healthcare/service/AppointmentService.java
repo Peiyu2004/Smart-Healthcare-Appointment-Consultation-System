@@ -16,6 +16,11 @@ public class AppointmentService {
         this.db = DatabaseStore.getInstance();
     }
 
+    // Retrieve all appointments in the system (for Admin / Staff views)
+    public List<Appointment> getAllAppointments() {
+        return new ArrayList<>(db.getAppointments().values());
+    }
+
     public List<ScheduleSlot> getAvailableSlots() {
         List<ScheduleSlot> available = new ArrayList<>();
         for (ScheduleSlot slot : db.getSlots().values()) {
@@ -37,10 +42,10 @@ public class AppointmentService {
         String bookedAt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         Appointment appointment = new Appointment(
-            appointmentId, patientId, doctorId, slotId, bookedAt, reason, "BOOKED", "NONE", "NONE"
+            appointmentId, patientId, doctorId, slotId, bookedAt, reason, "SCHEDULED", "NONE", "NONE"
         );
 
-        slot.setStatus("BOOKED");
+        slot.setStatus("SCHEDULED");
         db.getAppointments().put(appointmentId, appointment);
 
         db.saveSlots();
@@ -60,7 +65,7 @@ public class AppointmentService {
 
         ScheduleSlot slot = db.getSlots().get(app.getSlotId());
         if (slot != null) {
-            slot.setStatus("AVAILABLE");
+            slot.setStatus("SCHEDULED");
             db.saveSlots();
         }
 
