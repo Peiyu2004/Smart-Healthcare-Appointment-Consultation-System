@@ -75,14 +75,14 @@ public abstract class User {
         this.accountStatus = accountStatus;
     }
 
-    public boolean hasPermission(String permissionName) {
-        for (Role role : roles) {
-            if (role.hasPermission(permissionName)) {
-                return true;
-            }
-        }
-        return false;
-    }
+//    public boolean hasPermission(String permissionName) {
+//        for (Role role : roles) {
+//            if (role.hasPermission(permissionName)) {
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
 
     public abstract String getRoleLabel();
 }

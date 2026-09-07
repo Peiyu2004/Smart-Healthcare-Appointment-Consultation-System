@@ -1,3 +1,4 @@
+APP-001|U001|Dr. Sarah Jenkins|SLT113|2026-09-08 01:02:11|Headache and fever|CANCELLED|NONE|Have another plan
 APT101|John Doe|Dr. Sarah Jenkins|SLT101|2026-09-07T09:00:00|Fever and severe cough|IN_CONSULTATION|2026-09-07T08:50:00|N/A
 APT103|Michael Brown|Dr. Sarah Jenkins|SLT104|2026-09-07T10:30:00|Persistent migraine|IN_CONSULTATION|2026-09-07T09:55:00|N/A
 APT102|Jane Smith|Dr. Sarah Jenkins|SLT103|2026-09-07T10:00:00|Routine medical checkup|IN_CONSULTATION|2026-09-07T09:25:00|N/A
@@ -6,3 +7,4 @@ APT104|Emily Davis|Dr. Robert Chen|SLT106|2026-09-07T09:00:00|Sore throat and fl
 APT107|James Bond|Dr. Amanda Taylor|SLT110|2026-09-08T14:30:00|Skin rash consultation|WAITING|N/A|Medical leave
 APT106|Sarah Connor|Dr. Amanda Taylor|SLT109|2026-09-08T14:00:00|High blood pressure follow-up|WAITING|2026-09-07T09:20:00|N/A
 APT108|John Doe|Dr. Sarah Jenkins|SLT112|2026-09-10T09:00:00|Acne follow-up treatment|WAITING|N/A|N/A
+APP-0f7397ea|U001|Dr. Sarah Jenkins|SLT102|2026-09-08 00:49:23|Headache and fever|CANCELLED|NONE|Waited too long

@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class AppointmentService {
     private DatabaseStore db;
@@ -31,6 +30,32 @@ public class AppointmentService {
         return available;
     }
 
+    /**
+     * Helper method to generate sequential Appointment IDs in order:
+     * APP-001, APP-002, APP-003, etc.
+     */
+    private String generateNextAppointmentId() {
+        int maxId = 0;
+        
+        for (String id : db.getAppointments().keySet()) {
+            if (id != null && id.startsWith("APP-")) {
+                try {
+                    // Extract numerical suffix from IDs like "APP-001" or "APP-1"
+                    int num = Integer.parseInt(id.substring(4));
+                    if (num > maxId) {
+                        maxId = num;
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Skip existing legacy or non-numeric UUID formatted IDs
+                }
+            }
+        }
+        
+        int nextId = maxId + 1;
+        // Formats as 3 digits with leading zeros (e.g., APP-001, APP-002, APP-010)
+        return String.format("APP-%03d", nextId);
+    }
+
     public Appointment bookAppointment(String patientId, String doctorId, String slotId, String reason) {
         ScheduleSlot slot = db.getSlots().get(slotId);
         if (slot == null || !slot.isAvailable()) {
@@ -38,7 +63,8 @@ public class AppointmentService {
             return null;
         }
 
-        String appointmentId = "APP-" + UUID.randomUUID().toString().substring(0, 8);
+        // Generate sequential ID instead of random UUID
+        String appointmentId = generateNextAppointmentId();
         String bookedAt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         Appointment appointment = new Appointment(
@@ -65,7 +91,7 @@ public class AppointmentService {
 
         ScheduleSlot slot = db.getSlots().get(app.getSlotId());
         if (slot != null) {
-            slot.setStatus("SCHEDULED");
+            slot.setStatus("AVAILABLE"); // Restores slot availability when cancelled
             db.saveSlots();
         }
 
