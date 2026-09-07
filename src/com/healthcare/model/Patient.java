@@ -21,4 +21,16 @@ public class Patient extends User {
 
     @Override
     public String getRoleLabel() { return "PATIENT"; }
+    
+    public void setDateOfBirth(String dateOfBirth) {
+    this.dateOfBirth = dateOfBirth;
+}
+
+public void setGender(String gender) {
+    this.gender = gender;
+}
+
+public void setAddress(String address) {
+    this.address = address;
+}
 }
