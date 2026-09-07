@@ -20,7 +20,6 @@ public class UserService {
         this.db = DatabaseStore.getInstance();
     }
 
-    /** Hashes plain text using SHA-256. */
     public String hashPassword(String password) {
         if (password == null || password.isEmpty()) return "";
         try {
@@ -38,7 +37,6 @@ public class UserService {
         }
     }
 
-    /** Authenticates an active user using the stored password hash. */
     public User authenticate(String email, String inputPassword) {
         if (email == null || inputPassword == null) return null;
 
@@ -52,7 +50,7 @@ public class UserService {
         String storedPassword = user.getPasswordHash();
         String hashedInput = hashPassword(inputPassword);
 
-        // Keep compatibility with existing sample data that may contain plain text.
+      
         if (storedPassword.equals(hashedInput) || storedPassword.equals(inputPassword)) {
             return user;
         }
@@ -132,10 +130,7 @@ public class UserService {
         return new ArrayList<>(db.getUsers().values());
     }
 
-    /**
-     * Updates a user's profile. A user may update their own profile; only a user
-     * with PERM_MANAGE_USER may update another account.
-     */
+   
     public boolean updateProfile(User actor, String currentEmail, String newEmail,
                                 String fullName, String phoneNumber) {
         if (actor == null || currentEmail == null || newEmail == null
@@ -169,7 +164,7 @@ public class UserService {
         return true;
     }
 
-    /** Deactivates the actor's own account or another account when authorized. */
+  
     public boolean deactivateAccount(User actor, String targetEmail) {
         if (actor == null || targetEmail == null) return false;
 
@@ -184,7 +179,7 @@ public class UserService {
         return true;
     }
 
-    /** Changes a user's password after verifying the current password. */
+    
     public boolean changePassword(User user, String oldPassword, String newPassword) {
         if (user == null || oldPassword == null || newPassword == null || newPassword.isEmpty()) {
             return false;
@@ -200,7 +195,7 @@ public class UserService {
         return true;
     }
 
-    /** Allows an authorized administrator to reset another user's password. */
+   
     public boolean resetPassword(User actor, String targetEmail, String newPassword) {
         if (actor == null || targetEmail == null || newPassword == null || newPassword.isEmpty()) {
             return false;
