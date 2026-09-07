@@ -1,3 +1,6 @@
-CNS101|APT101|2026-09-07T09:00:00|2026-09-07T09:20:00|Patient presenting with mild fever (38.2 C) and productive cough. Lung sounds clear.|Acute Upper Respiratory Tract Infection|COMPLETED
-CNS102|APT102|2026-09-07T09:30:00|N/A|Patient reporting for standard health screening. Blood pressure 120/80 mmHg.|Ongoing Examination|IN_PROGRESS
-CNS103|APT105|2026-09-07T09:00:00|2026-09-07T09:25:00|Patient reports episodic chest tightness under exertion. ECG performed on site.|Mild Hypertension & Exercise-Induced Angina|COMPLETED
+C002|APT102|Jane Smith|Dr. Smith|Follow-up on hypertension management. Blood pressure elevated at 140/90.|Adjusted dosage of Amlodipine to 10mg daily. Advised low-sodium diet and consumed liquid only.|2026-09-08
+C001|APT101|John Doe|Dr. Smith|Patient reports mild chest discomfort and fatigue after light exertion.|Prescribed Rest, EKG test, and Follow-up in 2 weeks|2026-09-10
+C006|APT106|Michael Wilson|Dr. Dr. Smith|Patient experiencing seasonal allergy flare-ups with nasal congestion and itchy eyes.|Prescribed Cetirizine 10mg daily and antihistamine eye drops.|2026-09-14
+C005|APT105|Emily Davis|Dr. Sarah Jenkins|Severe lower back pain after heavy lifting. Limited range of motion.|Prescribed Ibuprofen 400mg and referred to Physical Therapy for 4 sessions.|2026-09-08
+C004|APT104|Robert Brown|Dr. Michael Lee|Persistent dry cough and mild fever lasting 4 days. Chest clear on auscultation.|Diagnosed with viral upper respiratory infection. Prescribed cough syrup and hydration.|2026-09-12
+C003|APT103|Alice Johnson|Dr. Sarah Jenkins|Routine annual health checkup. Patient reports occasional migraines.|Recommended blood panel workup and prescribed Sumatriptan as needed.|2026-09-12

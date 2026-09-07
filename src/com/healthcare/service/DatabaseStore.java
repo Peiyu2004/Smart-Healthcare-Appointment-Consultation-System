@@ -49,7 +49,9 @@ public class DatabaseStore {
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 String[] p = line.split("\\|");
-                permissions.put(p[0], new Permission(p[0], p[1], p[2], p[3]));
+                if (p.length >= 4) {
+                    permissions.put(p[0], new Permission(p[0], p[1], p[2], p[3]));
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -64,9 +66,11 @@ public class DatabaseStore {
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 String[] p = line.split("\\|");
-                Role role = new Role(p[0], p[1], p[2]);
-                permissions.values().forEach(role::addPermission);
-                roles.put(p[0], role);
+                if (p.length >= 3) {
+                    Role role = new Role(p[0], p[1], p[2]);
+                    permissions.values().forEach(role::addPermission);
+                    roles.put(p[0], role);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -83,13 +87,13 @@ public class DatabaseStore {
                 String[] p = line.split("\\|");
                 String type = p[0];
                 User user = null;
-                if (type.equals("PATIENT")) {
+                if (type.equals("PATIENT") && p.length >= 11) {
                     user = new Patient(p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10]);
                     roles.values().stream().filter(r -> r.getRoleName().equals("PATIENT")).findFirst().ifPresent(user.getRoles()::add);
-                } else if (type.equals("DOCTOR")) {
+                } else if (type.equals("DOCTOR") && p.length >= 11) {
                     user = new Doctor(p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], Double.parseDouble(p[10]));
                     roles.values().stream().filter(r -> r.getRoleName().equals("DOCTOR")).findFirst().ifPresent(user.getRoles()::add);
-                } else if (type.equals("ADMIN")) {
+                } else if (type.equals("ADMIN") && p.length >= 10) {
                     user = new Administrator(p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9]);
                     roles.values().stream().filter(r -> r.getRoleName().equals("ADMIN")).findFirst().ifPresent(user.getRoles()::add);
                 }
@@ -128,22 +132,26 @@ public class DatabaseStore {
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 String[] p = line.split("\\|");
-                appointments.put(p[0], new Appointment(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]));
+                if (p.length >= 9) {
+                    appointments.put(p[0], new Appointment(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]));
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void loadConsultations() {
+    public void loadConsultations() {
         File file = new File("consultations.txt");
         if (!file.exists()) return;
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
-                String[] p = line.split("\\|");
-                consultations.put(p[0], new Consultation(p[0], p[1], p[2], p[3], p[4], p[5], p[6]));
+                Consultation consultation = Consultation.fromFileString(line);
+                if (consultation != null) {
+                    consultations.put(consultation.getConsultationId(), consultation);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -159,8 +167,6 @@ public class DatabaseStore {
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 String[] p = line.split("\\|");
-                
-                // Expected format in text file: recipientName|NOTIFICATION_TYPE|message
                 if (p.length >= 3) {
                     NotificationType type = NotificationType.valueOf(p[1].trim().toUpperCase());
                     Notification notification = new Notification(p[0].trim(), type, p[2].trim());
@@ -213,7 +219,17 @@ public class DatabaseStore {
             e.printStackTrace();
         }
     }
-    
+
+    public void saveConsultations() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter("consultations.txt"))) {
+            for (Consultation c : consultations.values()) {
+                pw.println(c.toFileString());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void saveNotifications() {
         try (PrintWriter pw = new PrintWriter(new FileWriter("notifications.txt"))) {
             for (Notification n : notifications.values()) {

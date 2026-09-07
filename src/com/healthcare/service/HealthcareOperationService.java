@@ -1,9 +1,12 @@
 package com.healthcare.service;
 
 import com.healthcare.model.Appointment;
+import com.healthcare.model.Consultation;
 import com.healthcare.model.ScheduleSlot;
 import com.healthcare.model.User;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,6 +29,94 @@ public class HealthcareOperationService {
         }
         String role = actor.getRoleLabel().toUpperCase();
         return role.equals("DOCTOR") || role.equals("ADMIN") || role.equals("ADMINISTRATOR");
+    }
+
+    // =========================================================================
+    // MANAGE CONSULTATIONS AND PATIENT HISTORY
+    // =========================================================================
+
+    /**
+     * Retrieves completed clinical history logs for a specific patient by matching patient name or ID.
+     */
+    public List<Consultation> getPatientHistory(String patientIdentifier) {
+        if (patientIdentifier == null || patientIdentifier.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return db.getConsultations().values().stream()
+                .filter(c -> patientIdentifier.equalsIgnoreCase(c.getPatientName()) 
+                          || patientIdentifier.equalsIgnoreCase(c.getConsultationId()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieves a consultation entry by its associated appointment ID.
+     */
+    public Consultation getConsultationByAppointment(String appointmentId) {
+        if (appointmentId == null || appointmentId.trim().isEmpty()) {
+            return null;
+        }
+        return db.getConsultations().values().stream()
+                .filter(c -> appointmentId.equalsIgnoreCase(c.getAppointmentId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Creates or updates a consultation entry, validates inputs, and updates appointment status.
+     */
+    public boolean saveConsultationRecord(User actor, String appointmentId, String clinicalNotes, String diagnosis) {
+        if (!isAuthorized(actor)) {
+            System.err.println("Access Denied: Only Doctors and Administrators can manage consultation entries.");
+            return false;
+        }
+
+        Appointment app = db.getAppointments().get(appointmentId);
+        if (app == null) {
+            System.err.println("Error: Associated appointment not found.");
+            return false;
+        }
+
+        // Validate mandatory medical fields
+        if (clinicalNotes == null || clinicalNotes.trim().isEmpty() || diagnosis == null || diagnosis.trim().isEmpty()) {
+            System.err.println("[VALIDATION ERROR] Mandatory fields (Clinical Notes and Diagnosis) cannot be empty.");
+            return false;
+        }
+
+        // Search for an existing consultation bound to this appointment
+        Consultation consultation = db.getConsultations().values().stream()
+                .filter(c -> appointmentId.equalsIgnoreCase(c.getAppointmentId()))
+                .findFirst()
+                .orElse(null);
+
+        String today = LocalDate.now().toString();
+
+        if (consultation == null) {
+            String consultationId = "C00" + (db.getConsultations().size() + 1);
+            String patientName = app.getPatientId(); // Uses patient name/ID from appointment
+            String doctorName = actor.getFullName();
+
+            consultation = new Consultation(
+                    consultationId,
+                    appointmentId,
+                    patientName,
+                    doctorName,
+                    clinicalNotes,
+                    diagnosis,
+                    today
+            );
+            db.getConsultations().put(consultationId, consultation);
+        } else {
+            consultation.setClinicalNotes(clinicalNotes);
+            consultation.setDiagnosis(diagnosis);
+            consultation.setRecordDate(today);
+        }
+
+        // Mark appointment as completed upon final submission
+        app.setStatus("COMPLETED");
+
+        db.saveAppointments();
+        db.saveConsultations();
+        return true;
     }
 
     // =========================================================================
@@ -63,10 +154,9 @@ public class HealthcareOperationService {
             System.err.println("Access Denied: Only Doctors and Administrators can retrieve all slots.");
             return List.of();
         }
-        return new java.util.ArrayList<>(db.getSlots().values());
+        return new ArrayList<>(db.getSlots().values());
     }
 
-    // UPDATED: Added newDoctorName parameter to allow updating doctor assignments
     public boolean updateScheduleSlot(User actor, String slotId, String newDoctorName, String newDate, String newStartTime, String newEndTime, String newMode, String newStatus) {
         if (!isAuthorized(actor)) {
             System.err.println("Access Denied: Unauthorized role.");
@@ -148,7 +238,9 @@ public class HealthcareOperationService {
                         || actor.getFullName().equalsIgnoreCase(app.getDoctorId())
                         || (doctorIdentifier != null && doctorIdentifier.equalsIgnoreCase(app.getDoctorId()));
                 })
-                .filter(app -> "WAITING".equalsIgnoreCase(app.getStatus()) || "CHECKED_IN".equalsIgnoreCase(app.getStatus()))
+                .filter(app -> "WAITING".equalsIgnoreCase(app.getStatus()) 
+                            || "CHECKED_IN".equalsIgnoreCase(app.getStatus()) 
+                            || "IN_CONSULTATION".equalsIgnoreCase(app.getStatus()))
                 .sorted(Comparator.comparing(Appointment::getAppointmentId))
                 .collect(Collectors.toList());
 
