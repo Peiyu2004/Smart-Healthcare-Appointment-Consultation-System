@@ -18,4 +18,12 @@ public class Administrator extends User {
 
     @Override
     public String getRoleLabel() { return "ADMIN"; }
+
+    public void setStaffDepartment(String staffDepartment) {
+    this.staffDepartment = staffDepartment;
+}
+
+public void setEmploymentStatus(String employmentStatus) {
+    this.employmentStatus = employmentStatus;
+}
 }
