@@ -1,0 +1,10 @@
+NTF101|U001|APPOINTMENT_REMINDER|Reminder: Your appointment with Dr. Sarah Jenkins is scheduled for today at 09:00 AM.|SMS|2026-09-06T18:00:00|2026-09-06T18:00:05|READ
+NTF102|U001|QUEUE_CALL|Ticket #101: Dr. Sarah Jenkins is ready to see you in Room 101.|IN_APP|2026-09-07T09:00:00|2026-09-07T09:00:02|READ
+NTF103|U002|QUEUE_CALL|Ticket #102: Please proceed to Room 101 for your consultation.|IN_APP|2026-09-07T09:30:00|2026-09-07T09:30:01|READ
+NTF104|U003|APPOINTMENT_REMINDER|Reminder: Please check in at the reception desk for your 10:00 AM appointment.|SMS|2026-09-07T09:30:00|2026-09-07T09:30:03|SENT
+NTF105|U002|CANCELLATION_ALERT|Your appointment APT109 on 2026-09-15 has been successfully cancelled.|EMAIL|2026-09-03T10:05:00|2026-09-03T10:05:04|SENT
+NTF106|U005|APPOINTMENT_REMINDER|Reminder: Your appointment with Dr. Robert Chen is scheduled for today at 09:00 AM.|EMAIL|2026-09-06T18:00:00|2026-09-06T18:00:06|READ
+NTF107|U006|QUEUE_CALL|Ticket #202: You are next in line for Dr. Robert Chen in Room 102.|CONSOLE|2026-09-07T09:25:00|2026-09-07T09:25:01|SENT
+NTF108|U004|APPOINTMENT_REMINDER|Upcoming Appointment: Dr. Sarah Jenkins on 2026-09-07 at 10:30 AM.|IN_APP|2026-09-06T18:00:00|2026-09-06T18:00:02|SENT
+NTF109|U007|APPOINTMENT_REMINDER|Upcoming Appointment: Dr. Amanda Taylor on 2026-09-08 at 14:00 PM.|EMAIL|2026-09-07T08:00:00|2026-09-07T08:00:03|SENT
+NTF110|U003|CANCELLATION_ALERT|Notice: Your appointment APT110 has been cancelled by the clinic.|SMS|2026-09-04T15:50:00|2026-09-04T15:50:02|READ

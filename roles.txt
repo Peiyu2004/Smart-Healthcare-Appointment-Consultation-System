@@ -1,0 +1,3 @@
+R001|PATIENT|Standard patient account with appointment booking capabilities.
+R002|DOCTOR|Medical practitioner account with schedule slot and consultation management capabilities.
+R003|ADMIN|System administrator account with user management and report generation capabilities.
