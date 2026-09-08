@@ -11,7 +11,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class UserService {
     private final DatabaseStore db;
@@ -50,7 +49,7 @@ public class UserService {
         String storedPassword = user.getPasswordHash();
         String hashedInput = hashPassword(inputPassword);
 
-        if (storedPassword.equals(hashedInput) || storedPassword.equals(inputPassword)) {
+        if (storedPassword.equals(hashedInput)) {
             return user;
         }
         return null;
@@ -98,8 +97,8 @@ public class UserService {
             return null;
         }
 
-        String userId = "USR-" + UUID.randomUUID().toString().substring(0, 8);
-        String patientNo = "PAT-" + UUID.randomUUID().toString().substring(0, 6);
+        String userId = generateNextUserId();
+        String patientNo = generateNextRoleId("P");
         Patient patient = new Patient(userId, fullName.trim(), email, phoneNumber.trim(),
                 hashPassword(password), "ACTIVE", patientNo, dateOfBirth, gender, address);
         assignRole(patient, "PATIENT");
@@ -117,8 +116,8 @@ public class UserService {
             return null;
         }
 
-        String userId = "USR-" + UUID.randomUUID().toString().substring(0, 8);
-        String doctorId = "DOC-" + UUID.randomUUID().toString().substring(0, 6);
+        String userId = generateNextUserId();
+        String doctorId = generateNextRoleId("D");
         Doctor doctor = new Doctor(userId, fullName.trim(), email, phoneNumber.trim(),
                 hashPassword(password), "ACTIVE", doctorId, specialization, department, fee);
         assignRole(doctor, "DOCTOR");
@@ -136,14 +135,44 @@ public class UserService {
             return null;
         }
 
-        String userId = "USR-" + UUID.randomUUID().toString().substring(0, 8);
-        String adminId = "ADM-" + UUID.randomUUID().toString().substring(0, 6);
+        String userId = generateNextUserId();
+        String adminId = generateNextRoleId("A");
         Administrator admin = new Administrator(userId, fullName.trim(), email, phoneNumber.trim(),
                 hashPassword(password), "ACTIVE", adminId, staffDepartment, employmentStatus);
         assignRole(admin, "ADMIN");
         db.getUsers().put(email, admin);
         db.saveUsers();
         return admin;
+    }
+
+    private String generateNextUserId() {
+        int max = 0;
+        for (User user : db.getUsers().values()) {
+            String id = user.getUserId();
+            if (id != null && id.matches("U\\d+")) {
+                try {
+                    max = Math.max(max, Integer.parseInt(id.substring(1)));
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return String.format("U%03d", max + 1);
+    }
+
+    private String generateNextRoleId(String prefix) {
+        int max = 0;
+        for (User user : db.getUsers().values()) {
+            String id = null;
+            if (prefix.equals("P") && user instanceof Patient) id = ((Patient) user).getPatientNo();
+            else if (prefix.equals("D") && user instanceof Doctor) id = ((Doctor) user).getDoctorId();
+            else if (prefix.equals("A") && user instanceof Administrator) id = ((Administrator) user).getAdminId();
+            if (id != null) {
+                String digits = id.replaceAll("\\D", "");
+                if (!digits.isEmpty()) {
+                    try { max = Math.max(max, Integer.parseInt(digits)); } catch (NumberFormatException ignored) {}
+                }
+            }
+        }
+        return prefix + String.format("%03d", max + 1);
     }
 
     private boolean isRegistrationInputValid(String fullName, String email, String phoneNumber, String password) {
@@ -163,7 +192,9 @@ public class UserService {
     }
 
     public boolean updateProfile(User actor, String currentEmail, String newEmail,
-                                String fullName, String phoneNumber) {
+                                String fullName, String phoneNumber,
+                                String dateOfBirth, String gender, String address,
+                                String specialization, String department, Double consultationFee) {
         if (actor == null || currentEmail == null || newEmail == null
                 || fullName == null || phoneNumber == null) return false;
 
@@ -176,14 +207,11 @@ public class UserService {
         newEmail = newEmail.trim();
         fullName = fullName.trim();
         phoneNumber = phoneNumber.trim();
-
         if (newEmail.isEmpty() || fullName.isEmpty() || phoneNumber.isEmpty()) return false;
 
         if (!newEmail.equalsIgnoreCase(target.getEmail())) {
             User existing = db.getUsers().get(newEmail);
-            if (existing != null && !existing.getUserId().equals(target.getUserId())) {
-                return false;
-            }
+            if (existing != null && !existing.getUserId().equals(target.getUserId())) return false;
             db.getUsers().remove(target.getEmail());
             target.setEmail(newEmail);
             db.getUsers().put(newEmail, target);
@@ -191,6 +219,32 @@ public class UserService {
 
         target.setFullName(fullName);
         target.setPhoneNumber(phoneNumber);
+
+        if (target instanceof Patient) {
+            Patient patient = (Patient) target;
+            if (dateOfBirth != null && !dateOfBirth.trim().isEmpty()) patient.setDateOfBirth(dateOfBirth.trim());
+            if (gender != null && !gender.trim().isEmpty()) patient.setGender(gender.trim());
+            if (address != null && !address.trim().isEmpty()) patient.setAddress(address.trim());
+        } else if (target instanceof Doctor) {
+            Doctor doctor = (Doctor) target;
+            if (specialization != null && !specialization.trim().isEmpty()) doctor.setSpecialization(specialization.trim());
+            if (department != null && !department.trim().isEmpty()) doctor.setDepartment(department.trim());
+            if (consultationFee != null && consultationFee >= 0) doctor.setConsultationFee(consultationFee);
+        }
+
+        db.saveUsers();
+        return true;
+    }
+
+    public boolean deleteUser(User actor, String targetEmail) {
+        if (actor == null || targetEmail == null) return false;
+        if (!actor.hasPermission("PERM_MANAGE_USER")) return false;
+
+        User target = db.getUsers().get(targetEmail.trim());
+        if (target == null) return false;
+        if (actor.getUserId().equalsIgnoreCase(target.getUserId())) return false;
+
+        db.getUsers().remove(target.getEmail());
         db.saveUsers();
         return true;
     }
@@ -215,7 +269,7 @@ public class UserService {
         }
 
         String storedPassword = user.getPasswordHash();
-        if (!(storedPassword.equals(hashPassword(oldPassword)) || storedPassword.equals(oldPassword))) {
+        if (!storedPassword.equals(hashPassword(oldPassword))) {
             return false;
         }
 
@@ -225,9 +279,7 @@ public class UserService {
     }
 
     public boolean resetPassword(User actor, String targetEmail, String newPassword) {
-        if (actor == null || targetEmail == null || newPassword == null || newPassword.isEmpty()) {
-            return false;
-        }
+        if (actor == null || targetEmail == null || newPassword == null || newPassword.isEmpty()) return false;
         if (!actor.hasPermission("PERM_MANAGE_USER")) return false;
 
         User target = db.getUsers().get(targetEmail.trim());
