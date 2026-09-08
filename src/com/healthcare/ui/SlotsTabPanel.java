@@ -58,7 +58,7 @@ public class SlotsTabPanel extends JPanel {
     }
 
     public void applyRolePermissions(User currentUser, boolean isStaff) {
-        bookBtn.setVisible(!isStaff);
+        bookBtn.setVisible(true);
         addSlotBtn.setVisible(isStaff);
         updateSlotBtn.setVisible(isStaff);
         deleteSlotBtn.setVisible(isStaff);
