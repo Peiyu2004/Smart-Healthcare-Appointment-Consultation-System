@@ -49,6 +49,7 @@ public class Appointment {
     public String getCancellationReason() { return cancellationReason; }
 
     public void setStatus(String status) { this.status = status; }
+    public void setSlotId(String slotId) { this.slotId = slotId; }
     public void setCancellationReason(String cancellationReason) { this.cancellationReason = cancellationReason; }
     public void setPatientName(String patientName) { this.patientName = patientName; }
     public void setDoctorName(String doctorName) { this.doctorName = doctorName; }

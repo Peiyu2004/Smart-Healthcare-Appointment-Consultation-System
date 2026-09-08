@@ -1,11 +1,15 @@
-APP-001|U001|Dr. Sarah Jenkins|SLT113|2026-09-08 01:02:11|Headache and fever|CANCELLED|NONE|Have another plan
-APP-002|USR-4062|Dr. Sarah Jenkins|SLT113|2026-09-08 01:50:44|Headache and fever|SCHEDULED|NONE|NONE
-APT101|John Doe|Dr. Sarah Jenkins|SLT101|2026-09-07T09:00:00|Fever and severe cough|IN_CONSULTATION|2026-09-07T08:50:00|N/A
-APT103|Michael Brown|Dr. Sarah Jenkins|SLT104|2026-09-07T10:30:00|Persistent migraine|IN_CONSULTATION|2026-09-07T09:55:00|N/A
-APT102|Jane Smith|Dr. Sarah Jenkins|SLT103|2026-09-07T10:00:00|Routine medical checkup|IN_CONSULTATION|2026-09-07T09:25:00|N/A
-APT105|David Wilson|Dr. Robert Chen|SLT107|2026-09-07T09:30:00|Chest tightness and fatigue|COMPLETED|2026-09-07T08:55:00|N/A
+APT-006|U007|Dr. Robert Chen|SLT108|2026-09-08 12:53:12|Fever and cough|RESCHEDULED|NONE|NONE
+APT105|David Wilson|Dr. Robert Chen|SLT107|2026-09-07T09:30:00|Chest tightness and fatigue|COMPLETED|2026-09-07T08:55:00|dd
 APT104|Emily Davis|Dr. Robert Chen|SLT106|2026-09-07T09:00:00|Sore throat and flu|IN_CONSULTATION|N/A|N/A
 APT107|James Bond|Dr. Amanda Taylor|SLT110|2026-09-08T14:30:00|Skin rash consultation|WAITING|N/A|Medical leave
 APT106|Sarah Connor|Dr. Amanda Taylor|SLT109|2026-09-08T14:00:00|High blood pressure follow-up|WAITING|2026-09-07T09:20:00|N/A
 APT108|John Doe|Dr. Sarah Jenkins|SLT112|2026-09-10T09:00:00|Acne follow-up treatment|WAITING|N/A|N/A
+APP-001|U001|Dr. Sarah Jenkins|SLT113|2026-09-08 01:02:11|Headache and fever|CANCELLED|NONE|Have another plan
+APP-003|U004|Dr. Sarah Jenkins|SLT105|2026-09-08 02:06:40|dd|CANCELLED|NONE|dd
+APP-002|USR-4062|Dr. Sarah Jenkins|SLT113|2026-09-08 01:50:44|Headache and fever|SCHEDULED|NONE|NONE
+APT101|John Doe|Dr. Sarah Jenkins|SLT101|2026-09-07T09:00:00|Fever and severe cough|IN_CONSULTATION|2026-09-07T08:50:00|N/A
+APT103|Michael Brown|Dr. Sarah Jenkins|SLT104|2026-09-07T10:30:00|Persistent migraine|IN_CONSULTATION|2026-09-07T09:55:00|N/A
+APT102|Jane Smith|Dr. Sarah Jenkins|SLT103|2026-09-07T10:00:00|Routine medical checkup|IN_CONSULTATION|2026-09-07T09:25:00|N/A
+APP-005|U004|Dr. Robert Chen|SLT108|2026-09-08 02:29:48|ff|CANCELLED|NONE|dd
 APP-0f7397ea|U001|Dr. Sarah Jenkins|SLT102|2026-09-08 00:49:23|Headache and fever|CANCELLED|NONE|Waited too long
+APP-004|U004|Dr. Sarah Jenkins|SLT105|2026-09-08 02:29:18|dd|SCHEDULED|NONE|NONE
