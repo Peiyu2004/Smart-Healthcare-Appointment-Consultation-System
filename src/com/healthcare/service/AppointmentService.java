@@ -2,6 +2,7 @@ package com.healthcare.service;
 
 import com.healthcare.model.Appointment;
 import com.healthcare.model.ScheduleSlot;
+import com.healthcare.model.User;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -9,179 +10,229 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AppointmentService {
-	private DatabaseStore db;
+    private DatabaseStore db;
 
-	public AppointmentService() {
-		this.db = DatabaseStore.getInstance();
-	}
+    public AppointmentService() {
+        this.db = DatabaseStore.getInstance();
+    }
 
-	// Retrieve all appointments in the system (for Admin / Staff views)
-	public List<Appointment> getAllAppointments() {
-		return new ArrayList<>(db.getAppointments().values());
-	}
+    public List<Appointment> getAllAppointments() {
+        return new ArrayList<>(db.getAppointments().values());
+    }
 
-	public List<ScheduleSlot> getAvailableSlots() {
-		List<ScheduleSlot> available = new ArrayList<>();
-		for (ScheduleSlot slot : db.getSlots().values()) {
-			if (slot.isAvailable()) {
-				available.add(slot);
-			}
-		}
-		return available;
-	}
+    public List<ScheduleSlot> getAvailableSlots() {
+        List<ScheduleSlot> available = new ArrayList<>();
+        for (ScheduleSlot slot : db.getSlots().values()) {
+            if (isSlotAvailable(slot)) {
+                available.add(slot);
+            }
+        }
+        return available;
+    }
 
-	/**
-	 * Helper method to generate sequential Appointment IDs in order
-	 */
-	private String generateNextAppointmentId() {
-		int maxId = 0;
+    private boolean isSlotAvailable(ScheduleSlot slot) {
+        if (slot == null) return false;
+        String status = slot.getStatus() != null ? slot.getStatus().trim() : "";
+        return "AVAILABLE".equalsIgnoreCase(status) || slot.isAvailable();
+    }
 
-		for (String id : db.getAppointments().keySet()) {
-			if (id != null && id.startsWith("APT")) {
-				try {
-					// Extract numerical suffix from IDs like "APP-001" or "APP-1"
-					int num = Integer.parseInt(id.substring(4));
-					if (num > maxId) {
-						maxId = num;
-					}
-				} catch (NumberFormatException ignored) {
-					// Skip existing legacy or non-numeric UUID formatted IDs
-				}
-			}
-		}
+    /**
+     * Enhanced Doctor Matching Logic
+     * Matches across User IDs (U008), Full Names (Dr. Sarah Jenkins), and raw Names (Sarah Jenkins).
+     */
+    private boolean matchesDoctor(String val1, String val2) {
+        if (val1 == null || val2 == null) return false;
 
-		int nextId = maxId + 1;
-		// Formats as 3 digits with leading zeros (e.g., APP-001, APP-002, APP-010)
-		return String.format("APT%03d", nextId);
-	}
+        String s1 = val1.trim();
+        String s2 = val2.trim();
 
-	public Appointment bookAppointment(String patientId, String doctorId, String slotId, String reason) {
-		ScheduleSlot slot = db.getSlots().get(slotId);
-		if (slot == null || !slot.isAvailable()) {
-			System.out.println("Slot is either invalid or already booked.");
-			return null;
-		}
+        // Direct comparison
+        if (s1.equalsIgnoreCase(s2)) return true;
 
-		// Generate sequential ID instead of random UUID
-		String appointmentId = generateNextAppointmentId();
-		String bookedAt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        // Strip "Dr." / "Dr " prefixes and compare
+        String clean1 = s1.replaceAll("(?i)^dr\\.\\s*", "").replaceAll("(?i)^dr\\s*", "").trim();
+        String clean2 = s2.replaceAll("(?i)^dr\\.\\s*", "").replaceAll("(?i)^dr\\s*", "").trim();
+        if (!clean1.isEmpty() && clean1.equalsIgnoreCase(clean2)) return true;
 
-		Appointment appointment = new Appointment(appointmentId, patientId, doctorId, slotId, bookedAt, reason,
-				"SCHEDULED", "NONE", "NONE");
+        // Lookup against registered users in DatabaseStore
+        for (User u : db.getUsers().values()) {
+            String role = u.getRoleLabel() != null ? u.getRoleLabel().toUpperCase() : "";
+            if ("DOCTOR".equals(role) || "STAFF".equals(role)) {
+                String uId = u.getUserId() != null ? u.getUserId().trim() : "";
+                String uName = u.getFullName() != null ? u.getFullName().trim() : "";
+                String cleanUName = uName.replaceAll("(?i)^dr\\.\\s*", "").replaceAll("(?i)^dr\\s*", "").trim();
 
-		slot.setStatus("SCHEDULED");
-		db.getAppointments().put(appointmentId, appointment);
+                boolean val1MatchesUser = s1.equalsIgnoreCase(uId) || clean1.equalsIgnoreCase(cleanUName) || s1.equalsIgnoreCase(uName);
+                boolean val2MatchesUser = s2.equalsIgnoreCase(uId) || clean2.equalsIgnoreCase(cleanUName) || s2.equalsIgnoreCase(uName);
 
-		db.saveSlots();
-		db.saveAppointments();
+                if (val1MatchesUser && val2MatchesUser) return true;
+            }
+        }
+        return false;
+    }
 
-		return appointment;
-	}
+    private String generateNextAppointmentId() {
+        int maxId = 0;
+        for (String id : db.getAppointments().keySet()) {
+            if (id != null && id.toUpperCase().startsWith("APT")) {
+                try {
+                    int num = Integer.parseInt(id.replaceAll("[^0-9]", ""));
+                    if (num > maxId) maxId = num;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return String.format("APT%03d", maxId + 1);
+    }
 
-	public boolean cancelAppointment(String appointmentId, String reason) {
-		Appointment app = db.getAppointments().get(appointmentId);
-		if (app == null || "CANCELLED".equalsIgnoreCase(app.getStatus())
-				|| "COMPLETED".equalsIgnoreCase(app.getStatus())) {
-			return false;
-		}
+    public Appointment bookAppointment(String patientId, String doctorId, String slotId, String reason) {
+        ScheduleSlot slot = db.getSlots().get(slotId);
+        if (slot == null || !isSlotAvailable(slot)) {
+            System.out.println("Slot is either invalid or already booked.");
+            return null;
+        }
 
-		app.setStatus("CANCELLED");
-		app.setCancellationReason(reason);
+        String appointmentId = generateNextAppointmentId();
+        String bookedAt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
-		ScheduleSlot slot = db.getSlots().get(app.getSlotId());
-		if (slot != null) {
-			slot.setStatus("AVAILABLE"); // Restores slot availability when cancelled
-			db.saveSlots();
-		}
+        // Determine target doctor reference from slot or input parameter
+        String targetDoctorRef = (slot.getDoctorId() != null && !slot.getDoctorId().trim().isEmpty()) 
+                                 ? slot.getDoctorId() : doctorId;
 
-		db.saveAppointments();
-		return true;
-	}
+        // Resolve Patient details cleanly
+        User patientUser = db.getUserById(patientId);
+        String actualPatientId = patientUser != null ? patientUser.getUserId() : patientId;
+        String patientName = patientUser != null ? patientUser.getFullName() : patientId;
 
-	public List<Appointment> getAppointmentsByPatient(String patientId) {
-		List<Appointment> result = new ArrayList<>();
-		for (Appointment app : db.getAppointments().values()) {
-			if (app.getPatientId().equals(patientId)) {
-				result.add(app);
-			}
-		}
-		return result;
-	}
+        // Resolve Doctor details cleanly
+        User doctorUser = db.getUserById(targetDoctorRef);
+        String actualDoctorId = doctorUser != null ? doctorUser.getUserId() : targetDoctorRef;
+        String doctorName = doctorUser != null ? doctorUser.getFullName() : targetDoctorRef;
 
-	public List<Appointment> getAppointmentsByDoctor(String doctorId) {
-		List<Appointment> result = new ArrayList<>();
-		for (Appointment app : db.getAppointments().values()) {
-			if (app.getDoctorId().equals(doctorId)) {
-				result.add(app);
-			}
-		}
-		return result;
-	}
+        // Instantiate Appointment with all 11 explicit positional parameters
+        Appointment appointment = new Appointment(
+            appointmentId, 
+            actualPatientId, 
+            patientName, 
+            actualDoctorId, 
+            doctorName,
+            slotId, 
+            bookedAt, 
+            reason, 
+            "SCHEDULED", 
+            "NONE", 
+            "NONE"
+        );
 
-	public Appointment getAppointmentById(String appointmentId) {
+        slot.setStatus("SCHEDULED");
+        db.getAppointments().put(appointmentId, appointment);
 
-		return db.getAppointments().get(appointmentId);
+        db.saveSlots();
+        db.saveAppointments();
 
-	}
+        return appointment;
+    }
 
-	public List<ScheduleSlot> getAvailableSlotsByDoctor(String doctorId) {
+    public boolean cancelAppointment(String appointmentId, String reason) {
+        Appointment app = db.getAppointments().get(appointmentId);
+        if (app == null) return false;
 
-		List<ScheduleSlot> result = new ArrayList<>();
+        String status = app.getStatus() != null ? app.getStatus().toUpperCase() : "";
+        if ("CANCELLED".equals(status) || "COMPLETED".equals(status)) {
+            return false;
+        }
 
-		for (ScheduleSlot slot : db.getSlots().values()) {
+        app.setStatus("CANCELLED");
+        app.setCancellationReason(reason);
 
-			if (slot.getDoctorId().equals(doctorId) && slot.isAvailable()) {
+        ScheduleSlot slot = db.getSlots().get(app.getSlotId());
+        if (slot != null) {
+            slot.setStatus("AVAILABLE");
+            db.saveSlots();
+        }
 
-				result.add(slot);
-			}
-		}
+        db.saveAppointments();
+        return true;
+    }
 
-		return result;
-	}
+    public List<Appointment> getAppointmentsByPatient(String patientId) {
+        List<Appointment> result = new ArrayList<>();
+        if (patientId == null) return result;
 
-	public boolean rescheduleAppointment(String appointmentId, String newSlotId) {
+        for (Appointment app : db.getAppointments().values()) {
+            if (patientId.equalsIgnoreCase(app.getPatientId())) {
+                result.add(app);
+            }
+        }
+        return result;
+    }
 
-		Appointment app = db.getAppointments().get(appointmentId);
+    public List<Appointment> getAppointmentsByDoctor(String doctorIdOrName) {
+        List<Appointment> result = new ArrayList<>();
+        if (doctorIdOrName == null) return result;
 
-		if (app == null)
-			return false;
+        for (Appointment app : db.getAppointments().values()) {
+            // Check against both doctorId and doctorName fields stored on appointment record
+            if (matchesDoctor(app.getDoctorId(), doctorIdOrName) || matchesDoctor(app.getDoctorName(), doctorIdOrName)) {
+                result.add(app);
+            }
+        }
+        return result;
+    }
 
-		if ("CANCELLED".equalsIgnoreCase(app.getStatus()) || "COMPLETED".equalsIgnoreCase(app.getStatus())) {
+    public Appointment getAppointmentById(String appointmentId) {
+        return db.getAppointments().get(appointmentId);
+    }
 
-			return false;
-		}
+    public List<ScheduleSlot> getAvailableSlotsByDoctor(String doctorId) {
+        List<ScheduleSlot> result = new ArrayList<>();
+        if (doctorId == null || doctorId.trim().isEmpty()) {
+            return getAvailableSlots();
+        }
 
-		ScheduleSlot oldSlot = db.getSlots().get(app.getSlotId());
+        for (ScheduleSlot slot : db.getSlots().values()) {
+            if (matchesDoctor(slot.getDoctorId(), doctorId) && isSlotAvailable(slot)) {
+                result.add(slot);
+            }
+        }
 
-		ScheduleSlot newSlot = db.getSlots().get(newSlotId);
+        if (result.isEmpty()) {
+            return getAvailableSlots();
+        }
 
-		if (newSlot == null || !newSlot.isAvailable()) {
+        return result;
+    }
 
-			return false;
-		}
+    public boolean rescheduleAppointment(String appointmentId, String newSlotId) {
+        Appointment app = db.getAppointments().get(appointmentId);
+        if (app == null) return false;
 
-		// release old slot
-		if (oldSlot != null) {
+        String currentStatus = app.getStatus() != null ? app.getStatus().toUpperCase() : "";
+        if ("CANCELLED".equals(currentStatus) || "COMPLETED".equals(currentStatus) || "IN_CONSULTATION".equals(currentStatus)) {
+            return false;
+        }
 
-			oldSlot.setStatus("AVAILABLE");
-		}
+        ScheduleSlot newSlot = db.getSlots().get(newSlotId);
+        if (newSlot == null || !isSlotAvailable(newSlot)) {
+            return false;
+        }
 
-		// reserve new slot
-		newSlot.setStatus("RESERVED");
+        ScheduleSlot oldSlot = db.getSlots().get(app.getSlotId());
+        if (oldSlot != null) {
+            oldSlot.setStatus("AVAILABLE");
+        }
 
-		app.setSlotId(newSlotId);
-		app.setStatus("RESCHEDULED");
+        newSlot.setStatus("SCHEDULED");
 
-		db.saveSlots();
-		db.saveAppointments();
+        app.setSlotId(newSlotId);
+        app.setStatus("SCHEDULED");
 
-		return true;
+        db.saveSlots();
+        db.saveAppointments();
 
-	}
+        return true;
+    }
 
-	public ScheduleSlot getSlotById(String slotId) {
-
-		return db.getSlots().get(slotId);
-
-	}
+    public ScheduleSlot getSlotById(String slotId) {
+        return db.getSlots().get(slotId);
+    }
 }

@@ -1,7 +1,6 @@
 package com.healthcare.service;
 
 import com.healthcare.model.Appointment;
-import com.healthcare.model.Notification; 
 import com.healthcare.model.Consultation;
 import com.healthcare.model.ScheduleSlot;
 import com.healthcare.model.User;
@@ -39,16 +38,34 @@ public class HealthcareOperationService {
     // =========================================================================
 
     /**
-     * Retrieves completed clinical history logs for a specific patient by matching patient name or ID.
+     * Retrieves completed clinical history logs for a specific patient by matching patient ID or full name.
      */
     public List<Consultation> getPatientHistory(String patientIdentifier) {
         if (patientIdentifier == null || patientIdentifier.trim().isEmpty()) {
             return new ArrayList<>();
         }
+
+        // Retrieve actual patient user object to enable cross-checking ID and Name
+        User patient = db.getUsers().get(patientIdentifier);
+        if (patient == null) {
+            patient = db.getUserByEmail(patientIdentifier);
+        }
+        final String pId = (patient != null) ? patient.getUserId() : patientIdentifier;
+        final String pName = (patient != null) ? patient.getFullName() : patientIdentifier;
+
         return db.getConsultations().values().stream()
-                .filter(c -> patientIdentifier.equalsIgnoreCase(c.getPatientName()) 
+                .filter(c -> pId.equalsIgnoreCase(c.getPatientName()) 
+                          || pName.equalsIgnoreCase(c.getPatientName())
+                          || patientIdentifier.equalsIgnoreCase(c.getPatientName())
                           || patientIdentifier.equalsIgnoreCase(c.getConsultationId()))
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Retrieves all consultation records for a given patient ID.
+     */
+    public List<Consultation> getConsultationsForPatient(String patientId) {
+        return getPatientHistory(patientId);
     }
 
     /**
@@ -65,9 +82,17 @@ public class HealthcareOperationService {
     }
 
     /**
-     * Creates or updates a consultation entry, validates inputs, and updates appointment status.
+     * Legacy Overload for backwards compatibility.
      */
     public boolean saveConsultationRecord(User actor, String appointmentId, String clinicalNotes, String diagnosis) {
+        return saveConsultationRecord(actor, appointmentId, clinicalNotes, diagnosis, "");
+    }
+
+    /**
+     * Creates or updates a consultation entry, validates inputs, stores prescription separately,
+     * and updates appointment status.
+     */
+    public boolean saveConsultationRecord(User actor, String appointmentId, String clinicalNotes, String diagnosis, String prescription) {
         if (!isAuthorized(actor)) {
             System.err.println("Access Denied: Only Doctors and Administrators can manage consultation entries.");
             return false;
@@ -92,26 +117,56 @@ public class HealthcareOperationService {
                 .orElse(null);
 
         String today = LocalDate.now().toString();
+        String safePrescription = (prescription != null) ? prescription.trim() : "";
 
         if (consultation == null) {
-            String consultationId = "C00" + (db.getConsultations().size() + 1);
-            String patientName = app.getPatientId(); // Uses patient name/ID from appointment
+            // Calculate next numerical Consultation ID (C001, C002...)
+            int maxId = 0;
+            for (String id : db.getConsultations().keySet()) {
+                if (id != null && id.toUpperCase().startsWith("C")) {
+                    try {
+                        int num = Integer.parseInt(id.replaceAll("[^0-9]", ""));
+                        if (num > maxId) maxId = num;
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            String consultationId = String.format("C%03d", maxId + 1);
+
+            // Save patient ID / name and doctor name
+            String patientIdentifier = app.getPatientId();
             String doctorName = actor.getFullName();
 
             consultation = new Consultation(
                     consultationId,
                     appointmentId,
-                    patientName,
+                    patientIdentifier,
                     doctorName,
-                    clinicalNotes,
-                    diagnosis,
+                    clinicalNotes.trim(),
+                    diagnosis.trim(),
                     today
             );
+            
+            // Set prescription field explicitly on Consultation model if setter exists
+            try {
+                consultation.setPrescription(safePrescription);
+            } catch (Exception ignored) {}
+
             db.getConsultations().put(consultationId, consultation);
         } else {
-            consultation.setClinicalNotes(clinicalNotes);
-            consultation.setDiagnosis(diagnosis);
+            consultation.setClinicalNotes(clinicalNotes.trim());
+            consultation.setDiagnosis(diagnosis.trim());
             consultation.setRecordDate(today);
+            
+            try {
+                consultation.setPrescription(safePrescription);
+            } catch (Exception ignored) {}
+        }
+
+        // Save explicit prescription to DatabaseStore table if available
+        if (!safePrescription.isEmpty()) {
+            try {
+                db.savePrescriptionRecord(consultation.getConsultationId(), app.getPatientId(), actor.getUserId(), safePrescription);
+            } catch (Exception ignored) {}
         }
 
         // Mark appointment as completed upon final submission
@@ -119,11 +174,12 @@ public class HealthcareOperationService {
 
         db.saveAppointments();
         db.saveConsultations();
+        db.saveData();
         return true;
     }
 
     // =========================================================================
-    // SCHEDULE SLOT OPERATIONS (CREATE, UPDATE, DELETE)
+    // SCHEDULE SLOT OPERATIONS
     // =========================================================================
 
     public ScheduleSlot addScheduleSlot(User actor, String doctorName, String date, String startTime, String endTime, String mode) {
@@ -132,9 +188,9 @@ public class HealthcareOperationService {
             return null;
         }
 
-        int maxId = 100;
+        int maxId = 0;
         for (String id : db.getSlots().keySet()) {
-            if (id.startsWith("SLT")) {
+            if (id != null && id.toUpperCase().startsWith("SLT")) {
                 try {
                     int num = Integer.parseInt(id.replaceAll("[^0-9]", ""));
                     if (num > maxId) {
@@ -144,11 +200,12 @@ public class HealthcareOperationService {
             }
         }
 
-        String slotId = "SLT" + (maxId + 1);
-        ScheduleSlot newSlot = new ScheduleSlot(slotId, doctorName, date, startTime, endTime, mode, "SCHEDULED");
+        String slotId = String.format("SLT%03d", maxId + 1);
+        ScheduleSlot newSlot = new ScheduleSlot(slotId, doctorName, date, startTime, endTime, mode, "AVAILABLE");
 
         db.getSlots().put(slotId, newSlot);
         db.saveSlots();
+        db.saveData(); // Synchronize all data stores
         return newSlot;
     }
     
@@ -218,7 +275,6 @@ public class HealthcareOperationService {
     // PATIENT QUEUE OPERATIONS
     // =========================================================================
 
-    // Admin & Doctor Queue Access
     public Queue<Appointment> getDoctorQueue(User actor, String doctorIdentifier) {
         Queue<Appointment> queue = new LinkedList<>();
         if (!isAuthorized(actor)) {
@@ -229,21 +285,20 @@ public class HealthcareOperationService {
 
         List<Appointment> sortedQueue = db.getAppointments().values().stream()
                 .filter(app -> {
-                    // Admin can filter by target doctor OR retrieve all waiting patients if doctorIdentifier is empty/null
                     if (isAdmin) {
                         if (doctorIdentifier == null || doctorIdentifier.trim().isEmpty()) {
                             return true;
                         }
                         return doctorIdentifier.equalsIgnoreCase(app.getDoctorId());
                     }
-                    // Doctor view: match actor's User ID or Full Name against appointment doctor field
                     return actor.getUserId().equalsIgnoreCase(app.getDoctorId()) 
                         || actor.getFullName().equalsIgnoreCase(app.getDoctorId())
                         || (doctorIdentifier != null && doctorIdentifier.equalsIgnoreCase(app.getDoctorId()));
                 })
-                .filter(app -> "WAITING".equalsIgnoreCase(app.getStatus()) 
-                            || "CHECKED_IN".equalsIgnoreCase(app.getStatus()) 
-                            || "IN_CONSULTATION".equalsIgnoreCase(app.getStatus()))
+                .filter(app -> {
+                    String st = app.getStatus() != null ? app.getStatus().toUpperCase() : "";
+                    return "WAITING".equals(st);
+                })
                 .sorted(Comparator.comparing(Appointment::getAppointmentId))
                 .collect(Collectors.toList());
 
@@ -251,7 +306,6 @@ public class HealthcareOperationService {
         return queue;
     }
 
-    // Call next patient into consultation (Supports Admin & Doctor execution)
     public Appointment callNextPatient(User actor, String doctorIdentifier) {
         if (!isAuthorized(actor)) {
             System.err.println("Access Denied: Unauthorized role.");
@@ -259,13 +313,23 @@ public class HealthcareOperationService {
         }
 
         Queue<Appointment> queue = getDoctorQueue(actor, doctorIdentifier);
-        if (queue.isEmpty()) {
+        
+        Appointment nextApp = null;
+        for (Appointment app : queue) {
+            String st = app.getStatus() != null ? app.getStatus().toUpperCase() : "";
+            if ("WAITING".equals(st)) {
+                nextApp = app;
+                break;
+            }
+        }
+
+        if (nextApp == null) {
             return null;
         }
 
-        Appointment nextApp = queue.poll();
         nextApp.setStatus("IN_CONSULTATION");
         db.saveAppointments();
+        db.saveData();
 
         sendAppointmentReminder(nextApp);
         return nextApp;
@@ -279,6 +343,7 @@ public class HealthcareOperationService {
 
         app.setStatus("CANCELLED");
         db.saveAppointments();
+        db.saveData();
         return true;
     }
 
@@ -290,16 +355,31 @@ public class HealthcareOperationService {
 
         app.setStatus("WAITING");
         db.saveAppointments();
+        db.saveData();
         return true;
     }
 
     private void sendAppointmentReminder(Appointment app) {
+        // Fetch doctor information
         User doctor = db.getUsers().get(app.getDoctorId());
+        if (doctor == null) {
+            doctor = db.getUserByEmail(app.getDoctorId());
+        }
         String doctorFullName = (doctor != null) ? doctor.getFullName() : app.getDoctorId();
+
+        // Fetch patient information to get patient name
+        User patient = db.getUsers().get(app.getPatientId());
+        if (patient == null) {
+            patient = db.getUserByEmail(app.getPatientId());
+        }
+        String patientName = (patient != null) ? patient.getFullName() : app.getPatientId();
+
         String location = "the Consultation Room";
 
+        // Pass patient name along with doctor full name to the notification service
         notificationService.sendAppointmentReminder(
                 app.getPatientId(),
+                patientName,
                 app.getAppointmentId(),
                 doctorFullName,
                 location

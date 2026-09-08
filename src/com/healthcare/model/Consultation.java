@@ -8,9 +8,17 @@ public class Consultation {
     private String clinicalNotes;
     private String diagnosis;
     private String recordDate;
+    private String prescription;
 
+    // Overloaded Constructor for legacy callers without prescription
     public Consultation(String consultationId, String appointmentId, String patientName, 
                         String doctorName, String clinicalNotes, String diagnosis, String recordDate) {
+        this(consultationId, appointmentId, patientName, doctorName, clinicalNotes, diagnosis, recordDate, "");
+    }
+
+    // Full Constructor
+    public Consultation(String consultationId, String appointmentId, String patientName, 
+                        String doctorName, String clinicalNotes, String diagnosis, String recordDate, String prescription) {
         this.consultationId = consultationId;
         this.appointmentId = appointmentId;
         this.patientName = patientName;
@@ -18,6 +26,7 @@ public class Consultation {
         this.clinicalNotes = clinicalNotes;
         this.diagnosis = diagnosis;
         this.recordDate = recordDate;
+        this.prescription = prescription != null ? prescription : "";
     }
 
     // Getters
@@ -28,6 +37,7 @@ public class Consultation {
     public String getClinicalNotes() { return clinicalNotes; }
     public String getDiagnosis() { return diagnosis; }
     public String getRecordDate() { return recordDate; }
+    public String getPrescription() { return prescription; }
 
     // Setters
     public void setPatientName(String patientName) { this.patientName = patientName; }
@@ -35,8 +45,9 @@ public class Consultation {
     public void setClinicalNotes(String clinicalNotes) { this.clinicalNotes = clinicalNotes; }
     public void setDiagnosis(String diagnosis) { this.diagnosis = diagnosis; }
     public void setRecordDate(String recordDate) { this.recordDate = recordDate; }
+    public void setPrescription(String prescription) { this.prescription = prescription; }
 
-    // Converts the object to a pipe-delimited string format for file writing
+    // Converts the object to an 8-part pipe-delimited string format for file writing
     public String toFileString() {
         return String.join("|",
             consultationId != null ? consultationId : "",
@@ -45,7 +56,8 @@ public class Consultation {
             doctorName != null ? doctorName : "",
             clinicalNotes != null ? clinicalNotes.replace("\n", " ") : "",
             diagnosis != null ? diagnosis.replace("\n", " ") : "",
-            recordDate != null ? recordDate : ""
+            recordDate != null ? recordDate : "",
+            prescription != null ? prescription.replace("\n", " ") : ""
         );
     }
 
@@ -58,6 +70,9 @@ public class Consultation {
         if (parts.length < 7) {
             return null;
         }
+
+        String rx = parts.length >= 8 ? parts[7].trim() : "";
+
         return new Consultation(
             parts[0].trim(),
             parts[1].trim(),
@@ -65,7 +80,8 @@ public class Consultation {
             parts[3].trim(),
             parts[4].trim(),
             parts[5].trim(),
-            parts[6].trim()
+            parts[6].trim(),
+            rx
         );
     }
 }

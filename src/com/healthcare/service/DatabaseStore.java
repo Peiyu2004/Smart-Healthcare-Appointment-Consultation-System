@@ -72,7 +72,6 @@ public class DatabaseStore {
                     assignRolePermissions(role);
                     roles.put(p[0], role);
                 }
-
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -122,7 +121,7 @@ public class DatabaseStore {
                     roles.values().stream().filter(r -> r.getRoleName().equals("ADMIN")).findFirst().ifPresent(user.getRoles()::add);
                 }
                 if (user != null) {
-                    users.put(user.getEmail(), user);
+                    users.put(user.getEmail().toLowerCase(), user);
                 }
             }
         } catch (IOException e) {
@@ -148,20 +147,38 @@ public class DatabaseStore {
         }
     }
 
-    private void loadAppointments() {
+    public void loadAppointments() {
         File file = new File("appointments.txt");
         if (!file.exists()) return;
+
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 String[] p = line.split("\\|");
-                if (p.length >= 9) {
-                    appointments.put(p[0], new Appointment(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8]));
+
+                if (p.length >= 11) {
+                    String appId = p[0].trim();
+                    String patientId = p[1].trim();
+                    String patientName = p[2].trim();
+                    String doctorId = p[3].trim();
+                    String doctorName = p[4].trim();
+                    String slotId = p[5].trim();
+                    String bookedAt = p[6].trim();
+                    String reason = p[7].trim();
+                    String status = p[8].trim();
+                    String checkIn = p[9].trim();
+                    String cancelReason = p[10].trim();
+
+                    Appointment app = new Appointment(
+                        appId, patientId, patientName, doctorId, doctorName,
+                        slotId, bookedAt, reason, status, checkIn, cancelReason
+                    );
+                    appointments.put(appId, app);
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error loading appointments: " + e.getMessage());
         }
     }
 
@@ -204,6 +221,17 @@ public class DatabaseStore {
 
     // ==================== SAVE METHODS ====================
 
+    /**
+     * Master save method that persists all store data back to disk.
+     */
+    public void saveData() {
+        saveAppointments();
+        saveSlots();
+        saveConsultations();
+        saveUsers();
+        saveNotifications();
+    }
+
     public void saveUsers() {
         try (PrintWriter pw = new PrintWriter(new FileWriter("users.txt"))) {
             for (User u : users.values()) {
@@ -226,7 +254,19 @@ public class DatabaseStore {
     public void saveAppointments() {
         try (PrintWriter pw = new PrintWriter(new FileWriter("appointments.txt"))) {
             for (Appointment a : appointments.values()) {
-                pw.println(a.getAppointmentId() + "|" + a.getPatientId() + "|" + a.getDoctorId() + "|" + a.getSlotId() + "|" + a.getBookedAt() + "|" + a.getReasonForVisit() + "|" + a.getStatus() + "|" + a.getCheckInTime() + "|" + a.getCancellationReason());
+                pw.println(String.join("|",
+                    a.getAppointmentId(),
+                    a.getPatientId(),
+                    a.getPatientName() != null ? a.getPatientName() : a.getPatientId(),
+                    a.getDoctorId(),
+                    a.getDoctorName() != null ? a.getDoctorName() : a.getDoctorId(),
+                    a.getSlotId(),
+                    a.getBookedAt(),
+                    a.getReasonForVisit(),
+                    a.getStatus(),
+                    a.getCheckInTime(),
+                    a.getCancellationReason()
+                ));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -262,6 +302,49 @@ public class DatabaseStore {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Saves prescription details into the target consultation record and persists changes.
+     */
+    public void savePrescriptionRecord(String consultationId, String patientId, String doctorId, String prescription) {
+        Consultation consultation = consultations.get(consultationId);
+        if (consultation != null) {
+            try {
+                consultation.setPrescription(prescription);
+            } catch (Exception ignored) {}
+            saveConsultations();
+        }
+    }
+
+    // ==================== HELPER LOOKUPS ====================
+
+    /**
+     * Finds a user by their email address.
+     */
+    public User getUserByEmail(String email) {
+        if (email == null) return null;
+        return users.get(email.toLowerCase().trim());
+    }
+
+    /**
+     * Finds a user by User ID (e.g., U001), Email, or Full Name.
+     */
+    public User getUserById(String identifier) {
+        if (identifier == null || identifier.trim().isEmpty()) return null;
+        String cleanId = identifier.trim();
+
+        // 1. Direct Email Lookup
+        User user = users.get(cleanId.toLowerCase());
+        if (user != null) return user;
+
+        // 2. User ID or Full Name Lookup
+        for (User u : users.values()) {
+            if (cleanId.equalsIgnoreCase(u.getUserId()) || cleanId.equalsIgnoreCase(u.getFullName())) {
+                return u;
+            }
+        }
+        return null;
     }
 
     // ==================== GETTERS ====================

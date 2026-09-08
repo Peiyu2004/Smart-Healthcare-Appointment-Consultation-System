@@ -1,15 +1,9 @@
-APP-001|U001|Dr. Sarah Jenkins|SLT113|2026-09-08 01:02:11|Headache and fever|CANCELLED|NONE|Have another plan
-APP-002|USR-4062|Dr. Sarah Jenkins|SLT113|2026-09-08 01:50:44|Headache and fever|SCHEDULED|NONE|NONE
-APP-003|U004|Dr. Sarah Jenkins|SLT105|2026-09-08 02:06:40|dd|CANCELLED|NONE|dd
-APP-004|U004|Dr. Sarah Jenkins|SLT105|2026-09-08 02:29:18|dd|SCHEDULED|NONE|NONE
-APP-005|U004|Dr. Robert Chen|SLT108|2026-09-08 02:29:48|ff|CANCELLED|NONE|dd
-APP-006|U001|Dr. Robert Chen|SLT114|2026-09-08 15:20:17|Fever and cough|SCHEDULED|NONE|NONE
-APT-006|U007|Dr. Robert Chen|SLT108|2026-09-08 12:53:12|Fever and cough|RESCHEDULED|NONE|NONE
-APT101|John Doe|Dr. Sarah Jenkins|SLT101|2026-09-07T09:00:00|Fever and severe cough|IN_CONSULTATION|2026-09-07T08:50:00|N/A
-APT102|Jane Smith|Dr. Sarah Jenkins|SLT103|2026-09-07T10:00:00|Routine medical checkup|IN_CONSULTATION|2026-09-07T09:25:00|N/A
-APT103|Michael Brown|Dr. Sarah Jenkins|SLT104|2026-09-07T10:30:00|Persistent migraine|IN_CONSULTATION|2026-09-07T09:55:00|N/A
-APT104|Emily Davis|Dr. Robert Chen|SLT106|2026-09-07T09:00:00|Sore throat and flu|IN_CONSULTATION|N/A|N/A
-APT105|David Wilson|Dr. Robert Chen|SLT107|2026-09-07T09:30:00|Chest tightness and fatigue|COMPLETED|2026-09-07T08:55:00|N/A
-APT106|Sarah Connor|Dr. Amanda Taylor|SLT109|2026-09-08T14:00:00|High blood pressure follow-up|WAITING|2026-09-07T09:20:00|N/A
-APT107|James Bond|Dr. Amanda Taylor|SLT110|2026-09-08T14:30:00|Skin rash consultation|WAITING|N/A|Medical leave
-APT108|John Doe|Dr. Sarah Jenkins|SLT112|2026-09-10T09:00:00|Acne follow-up treatment|WAITING|N/A|N/AS
+APT010|U003|Michael Brown|U008|Dr. Sarah Jenkins|SLT004|2026-09-07 10:30:00|Persistent migraine|WAITING|2026-09-07 09:55:00|N/A
+APT013|U006|Sarah Connor|U010|Dr. Amanda Taylor|SLT009|2026-09-08 14:00:00|High blood pressure follow-up|WAITING|2026-09-07 09:20:00|N/A
+APT001|U001|John Doe|U008|Dr. Sarah Jenkins|SLT013|2026-09-08 01:02:11|Headache and fever|COMPLETED|N/A|N/A
+APT012|U005|David Wilson|U009|Dr. Robert Chen|SLT007|2026-09-07 09:30:00|Chest tightness and fatigue|COMPLETED|2026-09-07 08:55:00|N/A
+APT003|U004|Emily Davis|U008|Dr. Sarah Jenkins|SLT005|2026-09-08 02:06:40|Routine checkup|COMPLETED|N/A|Personal reasons
+APT014|U001|John Doe|U008|Dr. Sarah Jenkins|SLT015|2026-09-09 02:07:21|Headache and fever|SCHEDULED|NONE|NONE
+APT006|U001|John Doe|U009|Dr. Robert Chen|SLT006|2026-09-08 15:20:17|Fever and cough|IN_CONSULTATION|N/A|N/A
+APT007|U007|Robert Taylor|U009|Dr. Robert Chen|SLT008|2026-09-08 12:53:12|Fever and cough|SCHEDULED|N/A|N/A
+APT009|U002|Jane Smith|U008|Dr. Sarah Jenkins|SLT003|2026-09-07 10:00:00|Routine medical checkup|WAITING|2026-09-07 09:25:00|N/A

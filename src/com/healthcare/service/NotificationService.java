@@ -22,8 +22,14 @@ public class NotificationService {
         notifier.send(notification);
     }
 
-    public boolean sendAppointmentReminder(String patientId, String queueNumber, String doctorFullName, String location) {
-        String message = String.format("Ticket #%s: %s is ready for you in %s", queueNumber, doctorFullName, location);
+    /**
+     * Sends an appointment reminder notification containing patient name and doctor name.
+     */
+    public boolean sendAppointmentReminder(String patientId, String patientName, String queueNumber, String doctorFullName, String location) {
+        // Message using Patient Name and Doctor Name
+        String message = String.format("Dear %s, Ticket #%s: %s is ready for you in %s.", 
+                patientName, queueNumber, doctorFullName, location);
+
         Notification notification = new Notification(patientId, NotificationType.APPOINTMENT_REMINDER, message);
 
         boolean delivered = attemptDispatch(notification, "PRIMARY");
@@ -35,8 +41,8 @@ public class NotificationService {
         notificationHistory.add(notification);
 
         if (!delivered) {
-            System.out.println("[QUEUE ALERT] Notification delivery failed for Patient " + patientId
-                    + " (Ticket #" + queueNumber + ") - flagged for clinic staff.");
+            System.out.println("[QUEUE ALERT] Notification delivery failed for " + patientName 
+                    + " (ID: " + patientId + ", Ticket #" + queueNumber + ", Doctor: " + doctorFullName + ") - flagged for clinic staff.");
         }
 
         return delivered;
