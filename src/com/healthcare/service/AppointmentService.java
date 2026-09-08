@@ -53,7 +53,7 @@ public class AppointmentService {
 
 		int nextId = maxId + 1;
 		// Formats as 3 digits with leading zeros (e.g., APP-001, APP-002, APP-010)
-		return String.format("APT-%03d", nextId);
+		return String.format("APP-%03d", nextId);
 	}
 
 	public Appointment bookAppointment(String patientId, String doctorId, String slotId, String reason) {

@@ -1,6 +1,7 @@
 package com.healthcare.service;
 
 import com.healthcare.model.Appointment;
+import com.healthcare.model.Notification; 
 import com.healthcare.model.Consultation;
 import com.healthcare.model.ScheduleSlot;
 import com.healthcare.model.User;
@@ -15,9 +16,11 @@ import java.util.stream.Collectors;
 
 public class HealthcareOperationService {
     private DatabaseStore db;
+    private NotificationService notificationService;
 
     public HealthcareOperationService() {
         this.db = DatabaseStore.getInstance();
+        this.notificationService = new NotificationService(new com.healthcare.model.ConsoleNotifier()); 
     }
 
     /**
@@ -291,7 +294,15 @@ public class HealthcareOperationService {
     }
 
     private void sendAppointmentReminder(Appointment app) {
-        System.out.println("[REMINDER SENT] Notification sent to Patient: " 
-                + app.getPatientId() + " for Appointment ID: " + app.getAppointmentId());
+        User doctor = db.getUsers().get(app.getDoctorId());
+        String doctorFullName = (doctor != null) ? doctor.getFullName() : app.getDoctorId();
+        String location = "the Consultation Room";
+
+        notificationService.sendAppointmentReminder(
+                app.getPatientId(),
+                app.getAppointmentId(),
+                doctorFullName,
+                location
+        );
     }
 }
