@@ -2,6 +2,7 @@ APT010|U003|Michael Brown|U008|Dr. Sarah Jenkins|SLT004|2026-09-07 10:30:00|Pers
 APT013|U006|Sarah Connor|U010|Dr. Amanda Taylor|SLT009|2026-09-08 14:00:00|High blood pressure follow-up|WAITING|2026-09-07 09:20:00|N/A
 APT001|U001|John Doe|U008|Dr. Sarah Jenkins|SLT013|2026-09-08 01:02:11|Headache and fever|COMPLETED|N/A|N/A
 APT012|U005|David Wilson|U009|Dr. Robert Chen|SLT007|2026-09-07 09:30:00|Chest tightness and fatigue|COMPLETED|2026-09-07 08:55:00|N/A
+APT015|U011|System Admin|U008|Dr. Sarah Jenkins|SLT001|2026-09-09 04:53:18|Fever and cold|SCHEDULED|NONE|NONE
 APT003|U004|Emily Davis|U008|Dr. Sarah Jenkins|SLT005|2026-09-08 02:06:40|Routine checkup|COMPLETED|N/A|Personal reasons
 APT014|U001|John Doe|U008|Dr. Sarah Jenkins|SLT015|2026-09-09 02:07:21|Headache and fever|SCHEDULED|NONE|NONE
 APT006|U001|John Doe|U009|Dr. Robert Chen|SLT006|2026-09-08 15:20:17|Fever and cough|IN_CONSULTATION|N/A|N/A
