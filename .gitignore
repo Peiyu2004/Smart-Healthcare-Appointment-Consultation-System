@@ -1,28 +1,38 @@
-<<<<<<< HEAD
-/bin/
-=======
-# Compiled class file
+# Compiled Java files
 *.class
 
-# Log file
+# Build output
+/bin/
+/build/
+/out/
+/target/
+
+# Log files
 *.log
 
-# BlueJ files
+# BlueJ
 *.ctxt
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+# Java package files
 *.jar
 *.war
 *.nar
 *.ear
+
+# Compressed archives
 *.zip
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# JVM crash logs
 hs_err_pid*
 replay_pid*
->>>>>>> refs/remotes/origin/main
+
+# Eclipse files
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
