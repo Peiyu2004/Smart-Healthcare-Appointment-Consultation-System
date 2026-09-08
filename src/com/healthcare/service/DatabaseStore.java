@@ -69,13 +69,9 @@ public class DatabaseStore {
 
                 if (p.length >= 3) {
                     Role role = new Role(p[0], p[1], p[2]);
-                    permissions.values().forEach(role::addPermission);
+                    assignRolePermissions(role);
                     roles.put(p[0], role);
                 }
-
-                Role role = new Role(p[0], p[1], p[2]);
-                assignRolePermissions(role);
-                roles.put(p[0], role);
 
             }
         } catch (IOException e) {
