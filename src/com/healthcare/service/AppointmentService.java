@@ -31,14 +31,13 @@ public class AppointmentService {
 	}
 
 	/**
-	 * Helper method to generate sequential Appointment IDs in order: APP-001,
-	 * APP-002, APP-003, etc.
+	 * Helper method to generate sequential Appointment IDs in order
 	 */
 	private String generateNextAppointmentId() {
 		int maxId = 0;
 
 		for (String id : db.getAppointments().keySet()) {
-			if (id != null && id.startsWith("APP-")) {
+			if (id != null && id.startsWith("APT")) {
 				try {
 					// Extract numerical suffix from IDs like "APP-001" or "APP-1"
 					int num = Integer.parseInt(id.substring(4));
@@ -53,7 +52,7 @@ public class AppointmentService {
 
 		int nextId = maxId + 1;
 		// Formats as 3 digits with leading zeros (e.g., APP-001, APP-002, APP-010)
-		return String.format("APP-%03d", nextId);
+		return String.format("APT%03d", nextId);
 	}
 
 	public Appointment bookAppointment(String patientId, String doctorId, String slotId, String reason) {

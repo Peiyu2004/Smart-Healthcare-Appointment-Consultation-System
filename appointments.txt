@@ -3,6 +3,7 @@ APP-002|USR-4062|Dr. Sarah Jenkins|SLT113|2026-09-08 01:50:44|Headache and fever
 APP-003|U004|Dr. Sarah Jenkins|SLT105|2026-09-08 02:06:40|dd|CANCELLED|NONE|dd
 APP-004|U004|Dr. Sarah Jenkins|SLT105|2026-09-08 02:29:18|dd|SCHEDULED|NONE|NONE
 APP-005|U004|Dr. Robert Chen|SLT108|2026-09-08 02:29:48|ff|CANCELLED|NONE|dd
+APP-006|U001|Dr. Robert Chen|SLT114|2026-09-08 15:20:17|Fever and cough|SCHEDULED|NONE|NONE
 APT-006|U007|Dr. Robert Chen|SLT108|2026-09-08 12:53:12|Fever and cough|RESCHEDULED|NONE|NONE
 APT101|John Doe|Dr. Sarah Jenkins|SLT101|2026-09-07T09:00:00|Fever and severe cough|IN_CONSULTATION|2026-09-07T08:50:00|N/A
 APT102|Jane Smith|Dr. Sarah Jenkins|SLT103|2026-09-07T10:00:00|Routine medical checkup|IN_CONSULTATION|2026-09-07T09:25:00|N/A
@@ -11,4 +12,4 @@ APT104|Emily Davis|Dr. Robert Chen|SLT106|2026-09-07T09:00:00|Sore throat and fl
 APT105|David Wilson|Dr. Robert Chen|SLT107|2026-09-07T09:30:00|Chest tightness and fatigue|COMPLETED|2026-09-07T08:55:00|N/A
 APT106|Sarah Connor|Dr. Amanda Taylor|SLT109|2026-09-08T14:00:00|High blood pressure follow-up|WAITING|2026-09-07T09:20:00|N/A
 APT107|James Bond|Dr. Amanda Taylor|SLT110|2026-09-08T14:30:00|Skin rash consultation|WAITING|N/A|Medical leave
-APT108|John Doe|Dr. Sarah Jenkins|SLT112|2026-09-10T09:00:00|Acne follow-up treatment|WAITING|N/A|N/A
+APT108|John Doe|Dr. Sarah Jenkins|SLT112|2026-09-10T09:00:00|Acne follow-up treatment|WAITING|N/A|N/AS

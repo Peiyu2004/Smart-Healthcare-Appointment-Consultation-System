@@ -12,6 +12,7 @@ import com.healthcare.service.HealthcareOperationService;
 import com.healthcare.service.StatusTrackingService;
 import com.healthcare.service.UserService;
 import com.healthcare.service.ReportService;
+import com.healthcare.service.DatabaseStore;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -19,7 +20,33 @@ import java.awt.*;
 import java.util.List;
 import java.util.Queue;
 
+/**
+ * Merged version of HealthcareUI.
+ *
+ * Combines:
+ *  - From the "doc3" revision: Reschedule Appointment support, resolution of
+ *    patient names (instead of raw IDs) via resolvePatientName(), the fuller
+ *    Appointment ID/Doctor/Patient/Date/Time/Status/Reason table layout, and
+ *    the guard that blocks cancelling an appointment that is already
+ *    COMPLETED/CANCELLED.
+ *  - From the "doc4" revision: service-based registration
+ *    (userService.registerDoctor/registerPatient), a fully editable Profile
+ *    dialog, a complete Manage Users CRUD dialog (update/delete/reset
+ *    password with permission checks), Check-In Patient support, and the
+ *    Generate Report feature backed by ReportService.
+ */
 public class HealthcareUI extends JFrame {
+
+	/** Resolves a user's display name from their ID; falls back to the ID itself if not found. */
+	private String resolvePatientName(String patientId) {
+		for (User user : DatabaseStore.getInstance().getUsers().values()) {
+			if (user.getUserId().equals(patientId)) {
+				return user.getFullName();
+			}
+		}
+		return patientId; // Keeps legacy names if no matching user exists
+	}
+
 	private final UserService userService = new UserService();
 	private final AppointmentService appointmentService = new AppointmentService();
 	private final StatusTrackingService statusService = new StatusTrackingService();
@@ -56,6 +83,7 @@ public class HealthcareUI extends JFrame {
 	private JButton updateStatusBtn;
 	private JButton openConsultBtn;
 	private JButton cancelBtn;
+	private JButton rescheduleBtn;
 
 	private JTabbedPane tabbedPane;
 	private JPanel queuePanel;
@@ -97,7 +125,7 @@ public class HealthcareUI extends JFrame {
 		loginButton.setFont(new Font("Arial", Font.BOLD, 14));
 
 		JButton registerButton = createStyledButton("Register");
-		registerButton.setFont(new Font("Arial", Font.PLAIN, 12));
+		registerButton.setFont(new Font("Arial", Font.BOLD, 14));
 
 		gbc.gridx = 0;
 		gbc.gridy = 0;
@@ -176,7 +204,7 @@ public class HealthcareUI extends JFrame {
 
 		profileBtn.addActionListener(e -> showProfileDialog());
 		manageUsersBtn.addActionListener(e -> showManageUsersDialog());
-		generateReportBtn.addActionListener(e -> showGenerateReportDialog()); 
+		generateReportBtn.addActionListener(e -> showGenerateReportDialog());
 
 		logoutBtn.addActionListener(e -> {
 			currentUser = null;
@@ -194,7 +222,8 @@ public class HealthcareUI extends JFrame {
 		slotsTable = new JTable(slotsModel);
 
 		appointmentsModel = new NonEditableTableModel(
-				new String[] { "Appointment ID", "Doctor Name", "Patient Name", "Status", "Reason" }, 0);
+				new String[] { "Appointment ID", "Doctor Name", "Patient Name", "Date", "Time", "Status", "Reason" },
+				0);
 		appointmentsTable = new JTable(appointmentsModel);
 
 		queueModel = new NonEditableTableModel(
@@ -461,16 +490,19 @@ public class HealthcareUI extends JFrame {
 		checkInBtn = createStyledButton("Check-In Patient");
 		updateStatusBtn = createStyledButton("Update Status");
 		openConsultBtn = createStyledButton("Open Consultation");
+		rescheduleBtn = createStyledButton("Reschedule Appointment");
 		cancelBtn = createStyledButton("Cancel Selected Appointment");
 
 		appButtonPanel.add(checkInBtn);
 		appButtonPanel.add(updateStatusBtn);
 		appButtonPanel.add(openConsultBtn);
+		appButtonPanel.add(rescheduleBtn);
 		appButtonPanel.add(cancelBtn);
 		appPanel.add(appButtonPanel, BorderLayout.SOUTH);
 
 		tabbedPane.addTab("Appointments & Tracking", appPanel);
 
+		// Check-In Action
 		checkInBtn.addActionListener(e -> {
 			int row = appointmentsTable.getSelectedRow();
 			if (row != -1) {
@@ -536,35 +568,112 @@ public class HealthcareUI extends JFrame {
 			}
 		});
 
-		// Cancel Appointment with OK and Cancel Buttons
-		cancelBtn.addActionListener(e -> {
+		// Reschedule Appointment Action (restored) - offers available slots for the same doctor
+		rescheduleBtn.addActionListener(e -> {
 			int row = appointmentsTable.getSelectedRow();
-			if (row != -1) {
-				String appId = (String) appointmentsModel.getValueAt(row, 0);
 
-				JTextField reasonField = new JTextField(20);
-				JPanel panelDialog = new JPanel(new GridLayout(2, 1, 5, 5));
-				panelDialog.add(new JLabel("Enter Cancellation Reason for " + appId + ":"));
-				panelDialog.add(reasonField);
-
-				int option = JOptionPane.showConfirmDialog(this, panelDialog, "Cancel Appointment",
-						JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
-
-				if (option == JOptionPane.OK_OPTION) {
-					String reason = reasonField.getText().trim();
-					if (!reason.isEmpty()) {
-						if (appointmentService.cancelAppointment(appId, reason)) {
-							JOptionPane.showMessageDialog(this, "Appointment Cancelled.");
-							refreshDashboardData();
-						}
-					} else {
-						JOptionPane.showMessageDialog(this, "Cancellation reason is required.", "Validation Error",
-								JOptionPane.WARNING_MESSAGE);
-					}
-				}
-			} else {
+			if (row == -1) {
 				JOptionPane.showMessageDialog(this, "Please select an appointment.", "Selection Required",
 						JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+
+			String appId = (String) appointmentsModel.getValueAt(row, 0);
+			String status = (String) appointmentsModel.getValueAt(row, 5);
+
+			// Cannot reschedule a cancelled or completed appointment
+			if ("CANCELLED".equalsIgnoreCase(status) || "COMPLETED".equalsIgnoreCase(status)) {
+				JOptionPane.showMessageDialog(this, "A " + status.toLowerCase() + " appointment cannot be rescheduled.",
+						"Reschedule Error", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
+
+			Appointment selectedApp = appointmentService.getAppointmentById(appId);
+
+			if (selectedApp == null) {
+				JOptionPane.showMessageDialog(this, "Appointment not found.", "Error", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
+
+			// Get available slots of the same doctor
+			List<ScheduleSlot> availableSlots = appointmentService.getAvailableSlotsByDoctor(selectedApp.getDoctorId());
+
+			if (availableSlots.isEmpty()) {
+				JOptionPane.showMessageDialog(this, "No available slots for this doctor.", "Reschedule Failed",
+						JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+
+			String[] slotOptions = new String[availableSlots.size()];
+			for (int i = 0; i < availableSlots.size(); i++) {
+				ScheduleSlot s = availableSlots.get(i);
+				slotOptions[i] = s.getSlotId() + " | " + s.getSlotDate() + " " + s.getStartTime() + "-"
+						+ s.getEndTime();
+			}
+
+			JComboBox<String> slotBox = new JComboBox<>(slotOptions);
+
+			int result = JOptionPane.showConfirmDialog(this, slotBox, "Select New Appointment Time",
+					JOptionPane.OK_CANCEL_OPTION);
+
+			if (result == JOptionPane.OK_OPTION) {
+				int selectedIndex = slotBox.getSelectedIndex();
+				ScheduleSlot newSlot = availableSlots.get(selectedIndex);
+				boolean success = appointmentService.rescheduleAppointment(appId, newSlot.getSlotId());
+
+				if (success) {
+					JOptionPane.showMessageDialog(this, "Appointment rescheduled successfully.");
+					refreshDashboardData();
+				} else {
+					JOptionPane.showMessageDialog(this, "Reschedule failed.", "Error", JOptionPane.ERROR_MESSAGE);
+				}
+			}
+		});
+
+		// Cancel Appointment Action - guards against re-cancelling, then asks for a reason
+		cancelBtn.addActionListener(e -> {
+			int row = appointmentsTable.getSelectedRow();
+
+			if (row == -1) {
+				JOptionPane.showMessageDialog(this, "Please select an appointment.", "Selection Required",
+						JOptionPane.WARNING_MESSAGE);
+				return;
+			}
+
+			String appId = (String) appointmentsModel.getValueAt(row, 0);
+			Appointment app = appointmentService.getAppointmentById(appId);
+
+			if (app != null && ("CANCELLED".equalsIgnoreCase(app.getStatus())
+					|| "COMPLETED".equalsIgnoreCase(app.getStatus()))) {
+				JOptionPane.showMessageDialog(this,
+						"This appointment has already been " + app.getStatus().toLowerCase()
+								+ " and cannot be cancelled.",
+						"Cancellation Error", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
+
+			JTextField reasonField = new JTextField(20);
+			JPanel panelDialog = new JPanel(new GridLayout(2, 1, 5, 5));
+			panelDialog.add(new JLabel("Enter Cancellation Reason for " + appId + ":"));
+			panelDialog.add(reasonField);
+
+			int option = JOptionPane.showConfirmDialog(this, panelDialog, "Cancel Appointment",
+					JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+
+			if (option == JOptionPane.OK_OPTION) {
+				String reason = reasonField.getText().trim();
+				if (reason.isEmpty()) {
+					JOptionPane.showMessageDialog(this, "Cancellation reason is required.", "Validation Error",
+							JOptionPane.WARNING_MESSAGE);
+					return;
+				}
+				if (appointmentService.cancelAppointment(appId, reason)) {
+					JOptionPane.showMessageDialog(this, "Appointment Cancelled Successfully.");
+					refreshDashboardData();
+				} else {
+					JOptionPane.showMessageDialog(this, "Unable to cancel appointment.", "Error",
+							JOptionPane.ERROR_MESSAGE);
+				}
 			}
 		});
 
@@ -650,8 +759,8 @@ public class HealthcareUI extends JFrame {
 				sb.append("----------------------------------------------------------------------------------------\n")
 						.append("Consultation ID: ").append(c.getConsultationId()).append(" | Date: ")
 						.append(c.getRecordDate()).append(" | Attending Doctor: ").append(c.getDoctorName())
-						.append("\n").append("• Diagnosis: ").append(c.getDiagnosis()).append("\n")
-						.append("• Clinical Notes & Prescription: ").append(c.getClinicalNotes()).append("\n");
+						.append("\n").append("\u2022 Diagnosis: ").append(c.getDiagnosis()).append("\n")
+						.append("\u2022 Clinical Notes & Prescription: ").append(c.getClinicalNotes()).append("\n");
 			}
 			historyArea.setText(sb.toString());
 			historyArea.setCaretPosition(0);
@@ -800,10 +909,11 @@ public class HealthcareUI extends JFrame {
 		checkInBtn.setVisible(isStaff);
 		updateStatusBtn.setVisible(isStaff);
 		openConsultBtn.setVisible(isStaff);
+		rescheduleBtn.setVisible(true);
 		cancelBtn.setVisible(true);
 
 		manageUsersBtn.setVisible(isAdmin);
-		generateReportBtn.setVisible(isAdmin); 
+		generateReportBtn.setVisible(isAdmin);
 		queueHeaderPanel.setVisible(isAdmin);
 
 		if (isAdmin) {
@@ -1066,7 +1176,7 @@ public class HealthcareUI extends JFrame {
 		cancelButton.addActionListener(e -> dialog.dispose());
 		dialog.setVisible(true);
 	}
-	
+
 	private void showGenerateReportDialog() {
 	    JTextField startField = new JTextField(10);
 	    JTextField endField = new JTextField(10);
@@ -1170,26 +1280,36 @@ public class HealthcareUI extends JFrame {
 		if (isAdmin) {
 			List<Appointment> allApps = statusService.getDoctorAppointments("");
 			for (Appointment a : allApps) {
-				appointmentsModel.addRow(new Object[] { a.getAppointmentId(), a.getDoctorId(), a.getPatientId(),
-						a.getStatus(), a.getReasonForVisit() });
+				appointmentsModel.addRow(buildAppointmentRow(a));
 			}
 		} else if (isDoctor) {
 			List<Appointment> docApps = statusService.getDoctorAppointments(currentUser.getFullName());
 			for (Appointment a : docApps) {
-				appointmentsModel.addRow(new Object[] { a.getAppointmentId(), a.getDoctorId(), a.getPatientId(),
-						a.getStatus(), a.getReasonForVisit() });
+				appointmentsModel.addRow(buildAppointmentRow(a));
 			}
 		} else { // Patient View
 			List<Appointment> patientApps = statusService.getPatientAppointments(currentUser.getUserId());
 			for (Appointment a : patientApps) {
-				appointmentsModel.addRow(new Object[] { a.getAppointmentId(), a.getDoctorId(), a.getPatientId(),
-						a.getStatus(), a.getReasonForVisit() });
+				appointmentsModel.addRow(buildAppointmentRow(a));
 			}
 		}
 
 		if (isAdmin || isDoctor) {
 			refreshQueueTable();
 		}
+	}
+
+	/**
+	 * Builds a display row for the appointments table: resolves the slot's
+	 * date/time (restored from doc3) and the patient's display name via
+	 * resolvePatientName() rather than showing the raw patient ID.
+	 */
+	private Object[] buildAppointmentRow(Appointment a) {
+		ScheduleSlot slot = appointmentService.getSlotById(a.getSlotId());
+		String date = (slot != null) ? slot.getSlotDate() : "";
+		String time = (slot != null) ? slot.getStartTime() + " - " + slot.getEndTime() : "";
+		return new Object[] { a.getAppointmentId(), a.getDoctorId(), resolvePatientName(a.getPatientId()),
+				date, time, a.getStatus(), a.getReasonForVisit() };
 	}
 
 	private void refreshQueueTable() {
@@ -1207,8 +1327,8 @@ public class HealthcareUI extends JFrame {
 		int pos = 1;
 		if (queue != null) {
 			for (Appointment a : queue) {
-				queueModel.addRow(
-						new Object[] { pos++, a.getAppointmentId(), a.getDoctorId(), a.getPatientId(), a.getStatus() });
+				queueModel.addRow(new Object[] { pos++, a.getAppointmentId(), a.getDoctorId(),
+						resolvePatientName(a.getPatientId()), a.getStatus() });
 			}
 		}
 	}
